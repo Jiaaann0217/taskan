@@ -1,5 +1,6 @@
 import {supabase} from "@/lib/supabase";
 import TaskForm from "./TaskForm";
+import TaskEditForm from "./TaskEditForm"
 
 export default async function Home() {
   const { data: tasks, error} = await supabase
@@ -45,6 +46,8 @@ return (
             <p>
               締切：{task.deadline ?? "未設定"}
             </p>
+
+            <TaskEditForm task={task} />
         </div>
       ))}
     </div>
