@@ -5,11 +5,15 @@ import { supabase } from "@/lib/supabase";
 export default function TaskForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [status, setStatus] = useState("未着手");
+  const [progress, setProgress] = useState(0);
+  const [startDate, setStartDate] = useState("");
   const [deadline, setDeadline] = useState("");
   const [users, setUsers] = useState<
-  { id: string; name: string}[]
+    { id: string; name: string}[]
   >([]);
   const [assigneeId, setassigneeId] = useState("");
+  
 
   useEffect(() =>{
     const fetchUsers = async () => {
@@ -43,8 +47,11 @@ export default function TaskForm() {
     .insert({
       title,
       description,
+      start_date: startDate || null,
       deadline: deadline || null,
       assignee_id: assigneeId || null,
+      status,
+      progress,
     });
 
     if (error) {
@@ -78,11 +85,40 @@ export default function TaskForm() {
 
       <input
         type="date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        className="rounded border p-2"
+        aria-label="開始日"
+      />
+
+      <input
+        type="date"
         value={deadline}
         onChange={(e) => setDeadline(e.target.value)}
-        className="rounded border p-2"
+        className="rounded border p-2 ml-2"
         />
 
+      <select
+        value = {status}
+        onChange={(e) => setStatus(e.target.value)}
+        className="w-full rounded border p-2"
+        >
+          <option value="未着手">未着手</option>
+          <option value="作業中">作業中</option>
+          <option value="レビュー待ち">レビュー待ち</option>
+          <option value="修正中">修正中</option>
+          <option value="完了">完了</option>
+      </select>
+      
+      <input
+        type="number"
+        min="0"
+        max="100"
+        value={progress}
+        onChange={(e) => setProgress(Number(e.target.value))}
+        className="w-full rounded border bg-white p-2 text-gray-900"
+        placeholder="進捗率(0~100)"
+        />
 
       <select
         value={assigneeId}
@@ -100,7 +136,7 @@ export default function TaskForm() {
 
         <button
           type="submit"
-          className="rounded bg-black px-4 py-2 text-white"
+          className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
           >
             タスクを追加
           </button>

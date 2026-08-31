@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase"
 
 type Task = {
@@ -8,7 +8,8 @@ type Task = {
   title: string;
   description: string | null;
   deadline: string | null;
-  assignee_id: string | null
+  assignee_id: string | null;
+  status: string | null;
 };
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function TaskEditForm({ task }: Props) {
+  const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(
     task.description ?? ""
@@ -26,6 +28,26 @@ export default function TaskEditForm({ task }: Props) {
   const [assigneeId, setAssigneeId] = useState(
     task.assignee_id ?? ""
   );
+  const [status, setStatus] = useState(task.status ?? "未着手");
+
+  const [users, setUsers] = useState<{id: string; name: string}[] >([]);
+  
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const {data, error} = await supabase
+      .from("users")
+      .select("id, name")
+    
+    if(error) {
+      console.error("users取得エラー:", error);
+      return;
+    }
+
+    setUsers(data);
+  };
+
+  fetchUsers();
+}, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +58,8 @@ export default function TaskEditForm({ task }: Props) {
         title,
         description,
         deadline: deadline || null,
+        assignee_id: assigneeId || null,
+        status,
       })
       .eq("id", task.id)
       .select();
@@ -74,11 +98,21 @@ export default function TaskEditForm({ task }: Props) {
     }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="mt-4 space-y-3 rounded-lg bg-gray-50 p-4"
-    >
-      <input
+    <div>
+      {!isEditing ? (
+        <button
+          type="button"
+          onClick={() => setIsEditing(true)}
+          className="rounded border px-3 py-1"
+          >
+            編集
+          </button>
+      ):(
+        <form
+          onSubmit={handleSubmit}
+          className="mt-4 space-y-3 rounded-lg bg-gray-50 p-4"
+          >
+            <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
@@ -98,6 +132,31 @@ export default function TaskEditForm({ task }: Props) {
         className="rounded border p-2"
       />
 
+      <select
+        value={status}
+        onChange={(e) => setStatus(e.target.value)}
+        className="w-full rounded border bg-white p-2 text-gray-900"
+        >
+          <option value="未着手">未着手</option>
+          <option value="作業中">作業中</option>
+          <option value="レビュー待ち">レビュー待ち</option>
+          <option value="修正中">修正中</option>
+          <option value="完了">完了</option>
+        </select>
+      <select
+        value={assigneeId}
+        onChange={(e) => setAssigneeId(e.target.value)}
+        className="w-full rounded border p-2"
+        >
+          <option value="">担当者を選択</option>
+          
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
+
       <button
         type="submit"
         className="rounded bg-blue-600 px-4 py-2 text-white"
@@ -107,11 +166,21 @@ export default function TaskEditForm({ task }: Props) {
 
       <button
         type="button"
+        onClick={() => setIsEditing(false)}
+        className="rounded border px-4 py-2 ml-2"
+      >
+          キャンセル
+      </button>
+
+      <button
+        type="button"
         onClick={handleDelete}
-        className="rounded bg-red-600 px-4 py-2 text-white"
+        className="rounded bg-red-600 px-4 py-2 ml-2 text-white"
         >
           削除
-        </button>
+      </button>
     </form>
+      )}
+    </div>  
   )
 }

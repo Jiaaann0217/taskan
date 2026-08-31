@@ -18,7 +18,7 @@ export default async function Home() {
 
 
 return (
-  <main className="p-8">
+  <main className="min-h-screen bg-gray-300 p-8 text-gray-900">
 
     <h1 className ="mb-6 text-3xl font-bold">
       学園祭タスク管理
@@ -26,39 +26,54 @@ return (
 
     <TaskForm />
     
-    <div className="space-y-4">
-      {tasks.map((task) => (
-        <div
-          key={task.id}
-          className="rounded-lg border p-4"
-          >
-            <h2 className="text-xl font-bold">
-              {task.title}
-            </h2>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse overflow-hidden rounded-lg border-2 border-gray-900">
+        <thead>
+          <tr className ="bg-blue-600 text-white">
+            <th className="border p-3">タスク</th>
+            <th className="border p-3">担当</th>
+            <th className="border p-3">状態</th>
+            <th className="border p-3">進捗</th>
+            <th className="border p-3">開始日</th>
+            <th className="border p-3">締切</th>
+            <th className="border p-3">操作</th>
+          </tr>
+        </thead>
 
-            <p className="mt-2 text-gray-600">
-              {task.description}
-            </p>
+        <tbody>
+          {tasks.map((task) =>(
+            <tr key={task.id}>
+              <td className="border p-3 font-medium">
+                {task.title}
+              </td>
 
-            <p className="mt-2">
-              進捗：{task.progress}%
-            </p>
+              <td className="border p-3">
+                {task.user?.name ?? "未設定"}
+              </td>
 
-            <p>
-              状態：{task.status}
-            </p>
+              <td className="border p-3">
+                {task.status}
+              </td>
 
-            <p>
-              締切：{task.deadline ?? "未設定"}
-            </p>
+              <td className="border p-3">
+                {task.progress}%
+              </td>
 
-            <p>
-              担当：{task.users?.name ?? "未設定"}
-            </p>
+              <td className="border p-3">
+                {task.start_date ?? "未設定"}
+              </td>
 
-            <TaskEditForm task={task} />
-        </div>
-      ))}
+              <td className="border p-3">
+                {task.deadline ?? "未設定"}
+              </td>
+
+              <td className="border p-3">
+                <TaskEditForm task={task} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   </main>
 );
