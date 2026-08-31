@@ -1,11 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function TaskForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [users, setUsers] = useState<
+  { id: string; name: string}[]
+  >([]);
+  const [assigneeId, setassigneeId] = useState("");
+
+  useEffect(() =>{
+    const fetchUsers = async () => {
+      const {data, error} = await supabase
+        .from("users")
+        .select("id, name");
+      
+      console.log("users data:" , data);
+      console.log("users error:", error);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setUsers(data);
+    };
+
+    fetchUsers();  
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +44,7 @@ export default function TaskForm() {
       title,
       description,
       deadline: deadline || null,
+      assignee_id: assigneeId || null,
     });
 
     if (error) {
@@ -57,6 +82,21 @@ export default function TaskForm() {
         onChange={(e) => setDeadline(e.target.value)}
         className="rounded border p-2"
         />
+
+
+      <select
+        value={assigneeId}
+        onChange={(e) => setassigneeId(e.target.value)}
+        className="w-full rounded border p-2"
+        >
+          <option value="">担当者を選択</option>
+
+          {users.map((user) =>(
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </select>
 
         <button
           type="submit"

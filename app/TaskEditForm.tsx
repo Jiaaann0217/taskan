@@ -8,6 +8,7 @@ type Task = {
   title: string;
   description: string | null;
   deadline: string | null;
+  assignee_id: string | null
 };
 
 type Props = {
@@ -21,6 +22,9 @@ export default function TaskEditForm({ task }: Props) {
   );
   const [deadline, setDeadline] = useState(
     task.deadline ?? ""
+  );
+  const [assigneeId, setAssigneeId] = useState(
+    task.assignee_id ?? ""
   );
 
   const handleSubmit = async (e: React.FormEvent) => {

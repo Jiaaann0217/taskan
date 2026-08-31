@@ -5,7 +5,12 @@ import TaskEditForm from "./TaskEditForm"
 export default async function Home() {
   const { data: tasks, error} = await supabase
     .from("tasks")
-    .select("*");
+    .select(`
+      *,
+      users (
+        name
+      )
+    `);
 
   if(error){
     return <div>エラー：{error.message}</div>;
@@ -45,6 +50,10 @@ return (
 
             <p>
               締切：{task.deadline ?? "未設定"}
+            </p>
+
+            <p>
+              担当：{task.users?.name ?? "未設定"}
             </p>
 
             <TaskEditForm task={task} />
