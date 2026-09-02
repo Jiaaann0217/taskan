@@ -48,7 +48,7 @@ return (
               </td>
 
               <td className="border p-3">
-                {task.user?.name ?? "未設定"}
+                {task.users?.name ?? "未設定"}
               </td>
 
               <td className="border p-3">

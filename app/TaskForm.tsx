@@ -10,18 +10,18 @@ export default function TaskForm() {
   const [startDate, setStartDate] = useState("");
   const [deadline, setDeadline] = useState("");
   const [users, setUsers] = useState<
-    { id: string; name: string}[]
+    { id: string; name: string }[]
   >([]);
   const [assigneeId, setassigneeId] = useState("");
-  
+  const [newUserName, setNewUserName] = useState("");
 
-  useEffect(() =>{
+  useEffect(() => {
     const fetchUsers = async () => {
-      const {data, error} = await supabase
+      const { data, error } = await supabase
         .from("users")
         .select("id, name");
-      
-      console.log("users data:" , data);
+
+      console.log("users data:", data);
       console.log("users error:", error);
 
       if (error) {
@@ -32,7 +32,7 @@ export default function TaskForm() {
       setUsers(data);
     };
 
-    fetchUsers();  
+    fetchUsers();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,17 +42,40 @@ export default function TaskForm() {
       return;
     }
 
+    let finalAssigneeId = assigneeId;
+
+    if (assigneeId === "_new_") {
+      if (!newUserName) return;
+
+      const { data, error } = await supabase
+        .from("users")
+        .insert({ name: newUserName })
+        .select("id")
+        .single();
+
+      if (error) {
+        if (error) {
+          console.error("ユーザー追加エラー:", error.message);
+          console.error("詳細:", error.details);
+          console.error("ヒント:", error.hint);
+          console.error("コード:", error.code);
+          return;
+        }
+      }
+      finalAssigneeId = data.id;
+    }
+
     const { error } = await supabase
-    .from("tasks")
-    .insert({
-      title,
-      description,
-      start_date: startDate || null,
-      deadline: deadline || null,
-      assignee_id: assigneeId || null,
-      status,
-      progress,
-    });
+      .from("tasks")
+      .insert({
+        title,
+        description,
+        start_date: startDate || null,
+        deadline: deadline || null,
+        assignee_id: finalAssigneeId || null,
+        status,
+        progress,
+      });
 
     if (error) {
       console.error(error);
@@ -96,20 +119,20 @@ export default function TaskForm() {
         value={deadline}
         onChange={(e) => setDeadline(e.target.value)}
         className="rounded border p-2 ml-2"
-        />
+      />
 
       <select
-        value = {status}
+        value={status}
         onChange={(e) => setStatus(e.target.value)}
         className="w-full rounded border p-2"
-        >
-          <option value="未着手">未着手</option>
-          <option value="作業中">作業中</option>
-          <option value="レビュー待ち">レビュー待ち</option>
-          <option value="修正中">修正中</option>
-          <option value="完了">完了</option>
+      >
+        <option value="未着手">未着手</option>
+        <option value="作業中">作業中</option>
+        <option value="レビュー待ち">レビュー待ち</option>
+        <option value="修正中">修正中</option>
+        <option value="完了">完了</option>
       </select>
-      
+
       <input
         type="number"
         min="0"
@@ -118,28 +141,40 @@ export default function TaskForm() {
         onChange={(e) => setProgress(Number(e.target.value))}
         className="w-full rounded border bg-white p-2 text-gray-900"
         placeholder="進捗率(0~100)"
-        />
+      />
 
       <select
         value={assigneeId}
         onChange={(e) => setassigneeId(e.target.value)}
         className="w-full rounded border p-2"
-        >
-          <option value="">担当者を選択</option>
+      >
+        <option value="">担当者を選択</option>
 
-          {users.map((user) =>(
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
-        </select>
+        {users.map((user) => (
+          <option key={user.id} value={user.id}>
+            {user.name}
+          </option>
+        ))}
 
-        <button
-          type="submit"
-          className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-          >
-            タスクを追加
-          </button>
+        <option value="_new_">新しい担当者を追加</option>
+      </select>
+
+      {assigneeId === "_new_" && (
+        <input
+          type="text"
+          placeholder="新しい担当者の名前"
+          value={newUserName}
+          onChange={(e) => setNewUserName(e.target.value)}
+          className="w-full rounded border p-2"
+        />
+      )}
+
+      <button
+        type="submit"
+        className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+      >
+        タスクを追加
+      </button>
     </form>
   );
 

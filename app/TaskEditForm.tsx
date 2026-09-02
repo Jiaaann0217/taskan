@@ -10,6 +10,7 @@ type Task = {
   deadline: string | null;
   assignee_id: string | null;
   status: string | null;
+  progress: number | null;
 };
 
 type Props = {
@@ -29,9 +30,9 @@ export default function TaskEditForm({ task }: Props) {
     task.assignee_id ?? ""
   );
   const [status, setStatus] = useState(task.status ?? "未着手");
-
   const [users, setUsers] = useState<{id: string; name: string}[] >([]);
-  
+  const [progress, setProgress] = useState(task.progress ?? 0);
+
   useEffect(() => {
     const fetchUsers = async () => {
       const {data, error} = await supabase
@@ -60,6 +61,7 @@ export default function TaskEditForm({ task }: Props) {
         deadline: deadline || null,
         assignee_id: assigneeId || null,
         status,
+        progress,
       })
       .eq("id", task.id)
       .select();
@@ -143,6 +145,18 @@ export default function TaskEditForm({ task }: Props) {
           <option value="修正中">修正中</option>
           <option value="完了">完了</option>
         </select>
+
+        <label className="block">
+          <span className="mb-1 block">進捗率</span>
+        </label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={progress}
+          onChange={(e) => setProgress(Number(e.target.value))}
+          className="w-full"
+        />
       <select
         value={assigneeId}
         onChange={(e) => setAssigneeId(e.target.value)}
