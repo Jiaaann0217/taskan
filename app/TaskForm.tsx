@@ -127,10 +127,13 @@ export default function TaskForm() {
         className="w-full rounded border p-2"
       >
         <option value="未着手">未着手</option>
-        <option value="作業中">作業中</option>
-        <option value="レビュー待ち">レビュー待ち</option>
-        <option value="修正中">修正中</option>
-        <option value="完了">完了</option>
+        <option value="Figma制作中">Figma制作中</option>
+        <option value="Figma確認中">Figma確認中</option>
+        <option value="Figma完了">Figma完了</option>
+        <option value="実装中">実装中</option>
+        <option value="プルリク確認中">プルリク確認中</option>
+        <option value="手直し中">手直し中</option>
+        <option value="完成">完成</option>
       </select>
 
       <input
