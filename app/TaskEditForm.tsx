@@ -75,6 +75,7 @@ export default function TaskEditForm({ task }: Props) {
     }
 
     setIsEditing(false);
+    window.location.reload();
   };
 
   const handleDelete = async () => {

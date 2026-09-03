@@ -2,6 +2,8 @@ import {supabase} from "@/lib/supabase";
 import TaskForm from "./TaskForm";
 import TaskEditForm from "./TaskEditForm"
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const { data: tasks, error} = await supabase
     .from("tasks")
