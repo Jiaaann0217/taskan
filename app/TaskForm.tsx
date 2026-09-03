@@ -65,7 +65,7 @@ export default function TaskForm() {
       finalAssigneeId = data.id;
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("tasks")
       .insert({
         title,
@@ -75,110 +75,114 @@ export default function TaskForm() {
         assignee_id: finalAssigneeId || null,
         status,
         progress,
-      });
+      })
+      .select();
+      
+  console.log("タスク追加結果:", data);
+  console.log("タスク追加エラー:", error);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+  if (error) {
+    console.error(error);
+    return;
+  }
 
-    setTitle("");
-    setDescription("");
-    setDeadline("");
+  setTitle("");
+  setDescription("");
+  setDeadline("");
 
-    window.location.reload();
-  };
+  window.location.reload();
+};
 
-  return (
-    <form onSubmit={handleSubmit} className="mb-8 space-y-4">
+return (
+  <form onSubmit={handleSubmit} className="mb-8 space-y-4">
+    <input
+      type="text"
+      placeholder="タスク名"
+      value={title}
+      onChange={(e) => setTitle(e.target.value)}
+      className="w-full rounded border p-2"
+    />
+
+    <textarea
+      placeholder="説明"
+      value={description}
+      onChange={(e) => setDescription(e.target.value)}
+      className="w-full rounded border p-2"
+    />
+
+    <input
+      type="date"
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+      className="rounded border p-2"
+      aria-label="開始日"
+    />
+
+    <input
+      type="date"
+      value={deadline}
+      onChange={(e) => setDeadline(e.target.value)}
+      className="rounded border p-2 ml-2"
+    />
+
+    <select
+      value={status}
+      onChange={(e) => setStatus(e.target.value)}
+      className="w-full rounded border p-2"
+    >
+      <option value="未着手">未着手</option>
+      <option value="Figma制作中">Figma制作中</option>
+      <option value="Figma確認中">Figma確認中</option>
+      <option value="Figma完了">Figma完了</option>
+      <option value="実装中">実装中</option>
+      <option value="プルリク確認中">プルリク確認中</option>
+      <option value="手直し中">手直し中</option>
+      <option value="完成">完成</option>
+    </select>
+
+    <input
+      type="number"
+      min="0"
+      max="100"
+      value={progress}
+      onChange={(e) => setProgress(Number(e.target.value))}
+      className="w-full rounded border bg-white p-2 text-gray-900"
+      placeholder="進捗率(0~100)"
+    />
+
+    <select
+      value={assigneeId}
+      onChange={(e) => setassigneeId(e.target.value)}
+      className="w-full rounded border p-2"
+    >
+      <option value="">担当者を選択</option>
+
+      {users.map((user) => (
+        <option key={user.id} value={user.id}>
+          {user.name}
+        </option>
+      ))}
+
+      <option value="_new_">新しい担当者を追加</option>
+    </select>
+
+    {assigneeId === "_new_" && (
       <input
         type="text"
-        placeholder="タスク名"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
+        placeholder="新しい担当者の名前"
+        value={newUserName}
+        onChange={(e) => setNewUserName(e.target.value)}
         className="w-full rounded border p-2"
       />
+    )}
 
-      <textarea
-        placeholder="説明"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        className="w-full rounded border p-2"
-      />
-
-      <input
-        type="date"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-        className="rounded border p-2"
-        aria-label="開始日"
-      />
-
-      <input
-        type="date"
-        value={deadline}
-        onChange={(e) => setDeadline(e.target.value)}
-        className="rounded border p-2 ml-2"
-      />
-
-      <select
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        className="w-full rounded border p-2"
-      >
-        <option value="未着手">未着手</option>
-        <option value="Figma制作中">Figma制作中</option>
-        <option value="Figma確認中">Figma確認中</option>
-        <option value="Figma完了">Figma完了</option>
-        <option value="実装中">実装中</option>
-        <option value="プルリク確認中">プルリク確認中</option>
-        <option value="手直し中">手直し中</option>
-        <option value="完成">完成</option>
-      </select>
-
-      <input
-        type="number"
-        min="0"
-        max="100"
-        value={progress}
-        onChange={(e) => setProgress(Number(e.target.value))}
-        className="w-full rounded border bg-white p-2 text-gray-900"
-        placeholder="進捗率(0~100)"
-      />
-
-      <select
-        value={assigneeId}
-        onChange={(e) => setassigneeId(e.target.value)}
-        className="w-full rounded border p-2"
-      >
-        <option value="">担当者を選択</option>
-
-        {users.map((user) => (
-          <option key={user.id} value={user.id}>
-            {user.name}
-          </option>
-        ))}
-
-        <option value="_new_">新しい担当者を追加</option>
-      </select>
-
-      {assigneeId === "_new_" && (
-        <input
-          type="text"
-          placeholder="新しい担当者の名前"
-          value={newUserName}
-          onChange={(e) => setNewUserName(e.target.value)}
-          className="w-full rounded border p-2"
-        />
-      )}
-
-      <button
-        type="submit"
-        className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-      >
-        タスクを追加
-      </button>
-    </form>
-  );
+    <button
+      type="submit"
+      className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+    >
+      タスクを追加
+    </button>
+  </form>
+);
 
 }
