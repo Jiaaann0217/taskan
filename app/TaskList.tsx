@@ -23,7 +23,7 @@ type Props = {
 };
 
 export default function TaskList({ tasks }: Props) {
-  const [sortBy, setSortBy] = useState("created_at");
+  const [sortBy, setSortBy] = useState("deadline");
   const [sortOrder, setSortOrder] = useState("desc");
 
   const statusStyles: Record<string, string> = {
@@ -41,12 +41,38 @@ export default function TaskList({ tasks }: Props) {
     return [...tasks].sort((a, b) => {
       let result = 0;
 
-      if(sortBy === "created_at") {
-        result =
-        new Date(a.created_at).getTime() - 
-        new Date(b.created_at).getTime();
+      if (sortBy === "deadline") {
+        if(!a.deadline && !b.deadline) {
+          result = 0;
+        } else if(!a.deadline) {
+          result = 1;
+        } else if(!b.deadline) {
+          result = -1;
+        }else {
+          result = 
+          new Date(a.deadline).getTime() - 
+          new Date(b.deadline).getTime();
+        }
       }
 
+      if (sortBy === "start_date") {
+        if(!a.start_date && !b.start_date) {
+          result = 0;
+        } else if(!a.start_date) {
+          result = 1;
+        } else if(!b.start_date) {
+          result = -1;
+        }else {
+          result = 
+          new Date(a.start_date).getTime() - 
+          new Date(b.start_date).getTime();
+        }
+      }
+
+      if(sortBy === "progress"){
+        result = (a.progress ?? 0) - (b.progress ?? 0);
+      }
+      
       if(sortBy === "title"){
         result = a.title.localeCompare(b.title, "ja");
       }
@@ -68,9 +94,10 @@ return (
           onChange={(e) => setSortBy(e.target.value)}
           className="rounded border bg-white px-3 py-2 text-sm"
         >
-          <option value="created_at">追加順</option>
+          <option value="deadline">締切日</option>
+          <option value="start_date">開始日</option>
           <option value="progress">進捗率</option>
-          <option value="title">名前</option>
+          <option value="title">タスク名</option>
         </select>
 
         <select
@@ -78,12 +105,23 @@ return (
           onChange={(e) => setSortOrder(e.target.value)}
           className="rounded border bg-white px-3 py-2 text-sm"
         >
-          <option value="desc">
-            {sortBy === "title" ? "Z → A" : "高い順・新しい順"}
-          </option>
-
           <option value="asc">
-            {sortBy === "title" ? "A → Z" : "低い順・古い順"}
+            {sortBy === "deadline"
+              ? "締切が近い順"
+              : sortBy === "start_date"
+              ? "開始日が近い順"
+              : sortBy === "progress"
+              ? "進捗率が低い順"
+              : "A→Z"}
+          </option>
+          <option value="desc">
+            {sortBy === "deadline"
+              ? "締切が遠い順"
+              : sortBy === "start_date"
+              ? "開始日が遠い順"
+              : sortBy === "progress"
+              ? "進捗率が高い順"
+              : "Z→A"}
           </option>
         </select>
       </div>
