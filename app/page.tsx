@@ -1,44 +1,49 @@
-import { supabase } from "@/lib/supabase";
-import TaskEditForm from "./TaskEditForm";
-import TaskList from "./TaskList";
+import Link from "next/link";
+import { getMyTeams } from "@/lib/teams";
+import AppHeader from "./AppHeader";
+import CreateTeamForm from "./CreateTeamForm";
+import JoinTeamForm from "./JoinTeamForm";
 
 export const dynamic = "force-dynamic";
 
+// ① トップ：自分のチーム一覧、チームを作る、招待コードで参加
 export default async function Home() {
-  const { data: tasks, error } = await supabase
-    .from("tasks")
-    .select(`
-      *,
-      users (
-        name
-      )
-    `);
-
-  if (error) {
-    return <div>エラー：{error.message}</div>;
-  }
-
-  const statusStyles: Record<string, string> = {
-    "未着手": "bg-gray-100 text-gray-700",
-    "Figma制作中": "bg-purple-100 text-purple-700",
-    "Figma確認中": "bg-yellow-100 text-yellow-700",
-    "Figma完了": "bg-green-100 text-green-700",
-    "実装中": "bg-blue-100 text-blue-700",
-    "プルリク確認中": "bg-orange-100 text-orange-700",
-    "手直し中": "bg-red-100 text-red-700",
-    "完成": "bg-emerald-100 text-emerald-700",
-  };
+  const teams = await getMyTeams(); // ★本人が書いた関数
 
   return (
-    <main className="min-h-screen bg-gray-300 p-4 md:p-8 text-gray-900">
+    <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
+      <AppHeader />
 
-      <h1 className="mb-6 text-3xl font-bold">
-        学園祭タスク管理
-      </h1>
+      <section className="mb-8">
+        <h2 className="mb-2 text-lg font-bold">あなたのチーム</h2>
+        {teams.length === 0 ? (
+          <p className="text-gray-600">まだチームに入っていません。下で作るか、招待コードで参加してください。</p>
+        ) : (
+          <ul className="space-y-2">
+            {teams.map((team) => (
+              <li key={team.id}>
+                <Link
+                  href={`/t/${team.id}`}
+                  className="block rounded border bg-white px-4 py-3 hover:bg-gray-50"
+                >
+                  {team.name} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <TaskEditForm mode="create" />
-
-      <TaskList tasks={tasks ?? []} />
+      <div className="grid gap-6 md:grid-cols-2">
+        <section className="rounded border bg-white p-4">
+          <h2 className="mb-2 font-bold">チームを作る</h2>
+          <CreateTeamForm />
+        </section>
+        <section className="rounded border bg-white p-4">
+          <h2 className="mb-2 font-bold">招待コードで参加</h2>
+          <JoinTeamForm />
+        </section>
+      </div>
     </main>
   );
 }
