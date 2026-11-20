@@ -1,34 +1,17 @@
-import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
-import type { Milestone, Team, TeamMember } from "@/lib/types";
+import Link from "next/link";
+import { loadTeam } from "@/lib/team-data";
 import AppHeader from "../../../AppHeader";
 import TeamNav from "../TeamNav";
-import { InviteCode, MilestoneEditor, TeamEditor } from "./SettingsForms";
+import { InviteCode, RoleSelect, TeamEditor } from "./SettingsForms";
 
 export const dynamic = "force-dynamic";
 
 const roleNames = { owner: "作った人", member: "メンバー", assistant: "AI" };
 
-// ③ 設定：招待コード、メンバー、段階、チーム名とステータス
+// 設定：招待コード、メンバー（役割）、チーム名・ゴール・GitHub・ステータス
 export default async function SettingsPage({ params }: { params: Promise<{ teamId: string }> }) {
   const { teamId } = await params;
-  const supabase = await createSupabaseServerClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const myId = claims?.claims?.sub;
-
-  const [teamRes, milestonesRes, membersRes] = await Promise.all([
-    supabase.from("teams").select("*").eq("id", teamId).maybeSingle(),
-    supabase.from("milestones").select("*").eq("team_id", teamId).order("position"),
-    supabase.from("team_members").select("*").eq("team_id", teamId).order("joined_at"),
-  ]);
-
-  const team = teamRes.data as Team | null;
-  if (!team) notFound();
-  const milestones = (milestonesRes.data ?? []) as Milestone[];
-  const members = (membersRes.data ?? []) as TeamMember[];
-
-  const myRole = members.find((m) => m.user_id === myId)?.role;
-  const canEdit = myRole === "owner" || myRole === "member";
+  const { team, members, myId, isOwner } = await loadTeam(teamId);
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
@@ -45,11 +28,23 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
 
         <section>
           <h2 className="mb-2 font-bold">メンバー（{members.length}人）</h2>
+          {isOwner && (
+            <p className="mb-2 text-xs text-gray-500">
+              AI 用のアカウントを招待コードで参加させたら、役割を「AI」にしてください。AI は読むことと質問箱に答えることだけできます。
+            </p>
+          )}
           <ul className="space-y-1">
             {members.map((m) => (
-              <li key={m.user_id} className="rounded border bg-white px-3 py-1">
-                {m.display_name} <span className="text-sm text-gray-500">{roleNames[m.role]}</span>
+              <li key={m.user_id} className="flex items-center gap-2 rounded border bg-white px-3 py-1">
+                <span>{m.display_name}</span>
                 {m.user_id === myId && <span className="text-sm text-gray-500">（あなた）</span>}
+                <span className="ml-auto text-sm text-gray-500">
+                  {isOwner && m.role !== "owner" ? (
+                    <RoleSelect teamId={team.id} userId={m.user_id} role={m.role} />
+                  ) : (
+                    roleNames[m.role]
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -57,16 +52,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
 
         <section>
           <h2 className="mb-2 font-bold">段階</h2>
-          {canEdit ? (
-            <MilestoneEditor teamId={team.id} milestones={milestones} />
-          ) : (
-            <ol className="list-decimal pl-5">{milestones.map((m) => <li key={m.id}>{m.name}</li>)}</ol>
-          )}
+          <Link href={`/t/${team.id}/roadmap`} className="text-sm text-blue-700 hover:underline">
+            段階の追加・期間・並べ替えは「ロードマップ」で →
+          </Link>
         </section>
 
-        {myRole === "owner" && (
+        {isOwner && (
           <section>
-            <h2 className="mb-2 font-bold">チーム名・ゴール・ステータス（作った人だけ）</h2>
+            <h2 className="mb-2 font-bold">チーム名・ゴール・GitHub・ステータス（作った人だけ）</h2>
             <TeamEditor team={team} />
           </section>
         )}

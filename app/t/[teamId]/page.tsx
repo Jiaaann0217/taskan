@@ -21,12 +21,16 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const { teamId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [teamRes, milestonesRes, tasksRes, membersRes] = await Promise.all([
+  const [teamRes, milestonesRes, tasksRes, membersRes, openQuestionsRes] = await Promise.all([
     supabase.from("teams").select("*").eq("id", teamId).maybeSingle(),
     supabase.from("milestones").select("*").eq("team_id", teamId).order("position"),
     supabase.from("tasks").select("*").eq("team_id", teamId),
     supabase.from("team_members").select("*").eq("team_id", teamId).order("joined_at"),
+    // 質問箱で、まだ解決していない質問（status の列だけ取る）
+    supabase.from("questions").select("status").eq("team_id", teamId).neq("status", "resolved"),
   ]);
+  const openQuestions = (openQuestionsRes.data ?? []) as { status: string }[];
+  const unanswered = openQuestions.filter((q) => q.status === "open").length;
 
   const team = teamRes.data as Team | null;
   if (!team) notFound();
@@ -54,7 +58,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
       </AppHeader>
 
       {/* 上の3つの数字 */}
-      <div className="mb-6 grid gap-3 md:grid-cols-3">
+      <div className="mb-6 grid gap-3 md:grid-cols-4">
         <div className="rounded bg-white p-4 shadow-sm">
           <div className="text-xs text-gray-500">ゴール</div>
           {team.goal ? (
@@ -86,11 +90,23 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
             {stuck.filter((s) => s.reason === "idle").length}
           </div>
         </div>
+        <Link href={`/t/${team.id}/questions`} className="rounded bg-white p-4 shadow-sm hover:bg-gray-50">
+          <div className="text-xs text-gray-500">質問箱</div>
+          <div className={`text-2xl font-bold ${unanswered > 0 ? "text-yellow-600" : ""}`}>{unanswered}</div>
+          <div className="text-xs text-gray-500">
+            未回答 {unanswered} ・ 解決待ち {openQuestions.length - unanswered}
+          </div>
+        </Link>
       </div>
 
       {/* 段階 */}
       <section className="mb-6 rounded bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-bold">段階</h2>
+        <h2 className="mb-3 font-bold">
+          段階{" "}
+          <Link href={`/t/${team.id}/roadmap`} className="text-sm font-normal text-gray-500 hover:underline">
+            ロードマップを見る →
+          </Link>
+        </h2>
         {stages.length === 0 ? (
           <Link href={`/t/${team.id}/settings`} className="text-sm text-gray-500 hover:underline">
             「設定」で段階を作ると、ここに進み具合が出ます

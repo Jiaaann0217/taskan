@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { Milestone, Team } from "@/lib/types";
+import type { Team, TeamMember } from "@/lib/types";
 
 // 招待コード。押すとコピーできる
 export function InviteCode({ code }: { code: string }) {
@@ -21,73 +21,40 @@ export function InviteCode({ code }: { code: string }) {
   );
 }
 
-// 段階：足す・消す・順番を変える（owner と member）
-export function MilestoneEditor({ teamId, milestones }: { teamId: string; milestones: Milestone[] }) {
+// メンバーの役割を変える（owner だけ）。データベースの関数 set_member_role を呼ぶ（supabase/007）
+export function RoleSelect({ teamId, userId, role }: { teamId: string; userId: string; role: TeamMember["role"] }) {
   const router = useRouter();
-  const [name, setName] = useState("");
   const [message, setMessage] = useState("");
 
-  const run = async (work: PromiseLike<{ error: { message: string } | null }>) => {
-    const { error } = await work;
-    if (error) setMessage(error.message);
+  const change = async (newRole: string) => {
+    const { error } = await supabase.rpc("set_member_role", {
+      target_team_id: teamId,
+      target_user_id: userId,
+      new_role: newRole,
+    });
+    setMessage(error ? error.message : "");
     router.refresh();
   };
 
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const last = milestones[milestones.length - 1];
-    await run(
-      supabase.from("milestones").insert({ team_id: teamId, name, position: last ? last.position + 1 : 0 })
-    );
-    setName("");
-  };
-
-  // 隣の段階と position を入れ替える
-  const swap = async (a: Milestone, b: Milestone) => {
-    await run(supabase.from("milestones").update({ position: b.position }).eq("id", a.id));
-    await run(supabase.from("milestones").update({ position: a.position }).eq("id", b.id));
-  };
-
-  const remove = async (m: Milestone) => {
-    if (!confirm(`段階「${m.name}」を消しますか？（中のタスクは「段階なし」になります）`)) return;
-    await run(supabase.from("milestones").delete().eq("id", m.id));
-  };
-
   return (
-    <div className="space-y-2">
-      <ol className="space-y-1">
-        {milestones.map((m, i) => (
-          <li key={m.id} className="flex items-center gap-2 rounded border bg-white px-3 py-1">
-            <span className="w-5 text-gray-500">{i + 1}</span>
-            <span className="flex-1">{m.name}</span>
-            <button disabled={i === 0} onClick={() => swap(m, milestones[i - 1])} className="px-1 disabled:opacity-30" aria-label="上へ">↑</button>
-            <button disabled={i === milestones.length - 1} onClick={() => swap(m, milestones[i + 1])} className="px-1 disabled:opacity-30" aria-label="下へ">↓</button>
-            <button onClick={() => remove(m)} className="px-1 text-red-600">消す</button>
-          </li>
-        ))}
-      </ol>
-      <form onSubmit={add} className="flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="段階の名前（例：環境構築）"
-          required
-          className="flex-1 rounded border px-3 py-1"
-        />
-        <button className="rounded bg-gray-900 px-3 py-1 text-white hover:bg-gray-700">足す</button>
-      </form>
-      {message && <p className="text-sm text-red-600">{message}</p>}
-    </div>
+    <>
+      <select value={role} onChange={(e) => change(e.target.value)} className="rounded border px-1 py-0.5">
+        <option value="member">メンバー</option>
+        <option value="assistant">AI</option>
+      </select>
+      {message && <span className="ml-2 text-red-600">{message}</span>}
+    </>
   );
 }
 
-// チーム名とステータスの種類（owner だけ）
+// チーム名・ゴール・GitHub・ステータスの種類（owner だけ）
 export function TeamEditor({ team }: { team: Team }) {
   const router = useRouter();
   const [name, setName] = useState(team.name);
   const [statusText, setStatusText] = useState(team.statuses.join("\n"));
   const [goal, setGoal] = useState(team.goal ?? "");
   const [goalDate, setGoalDate] = useState(team.goal_date ?? "");
+  const [repoUrl, setRepoUrl] = useState(team.repo_url ?? "");
   const [message, setMessage] = useState("");
 
   const save = async (e: React.FormEvent) => {
@@ -98,7 +65,10 @@ export function TeamEditor({ team }: { team: Team }) {
       setMessage("ステータスは2つ以上にしてください");
       return;
     }
-    const { error } = await supabase.from("teams").update({ name, statuses, goal: goal || null, goal_date: goalDate || null }).eq("id", team.id);
+    const { error } = await supabase
+      .from("teams")
+      .update({ name, statuses, goal: goal || null, goal_date: goalDate || null, repo_url: repoUrl || null })
+      .eq("id", team.id);
     setMessage(error ? `保存できませんでした：${error.message}` : "保存しました");
     router.refresh();
   };
@@ -117,6 +87,15 @@ export function TeamEditor({ team }: { team: Team }) {
         />
         <input type="date" value={goalDate} onChange={(e) => setGoalDate(e.target.value)} className="rounded border px-3 py-1" />
       </div>
+      <label className="block text-sm text-gray-600">
+        GitHub リポジトリ（チームの決まりを置く場所。AI が質問に答えるときに読む）
+      </label>
+      <input
+        value={repoUrl}
+        onChange={(e) => setRepoUrl(e.target.value)}
+        placeholder="https://github.com/〇〇/〇〇"
+        className="w-full rounded border px-3 py-1"
+      />
       <label className="block text-sm text-gray-600">
         ステータス（1行に1つ。上から順に進み、一番下が「完了」）
       </label>

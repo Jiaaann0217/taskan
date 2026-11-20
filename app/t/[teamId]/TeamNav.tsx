@@ -3,14 +3,16 @@ import Link from "next/link";
 type Props = {
   teamId: string;
   teamName: string;
-  current: "dashboard" | "tasks" | "settings";
+  current: "dashboard" | "roadmap" | "tasks" | "questions" | "settings";
 };
 
-// チームの中の切り替え：ダッシュボード・タスク一覧・設定
+// チームの中の切り替え
 export default function TeamNav({ teamId, teamName, current }: Props) {
   const tabs = [
     { key: "dashboard", label: "ダッシュボード", href: `/t/${teamId}` },
+    { key: "roadmap", label: "ロードマップ", href: `/t/${teamId}/roadmap` },
     { key: "tasks", label: "タスク一覧", href: `/t/${teamId}/tasks` },
+    { key: "questions", label: "質問箱", href: `/t/${teamId}/questions` },
     { key: "settings", label: "設定", href: `/t/${teamId}/settings` },
   ];
 
@@ -18,7 +20,7 @@ export default function TeamNav({ teamId, teamName, current }: Props) {
     <>
       <span className="text-gray-400">/</span>
       <span className="font-bold">{teamName}</span>
-      <nav className="flex gap-1 text-sm">
+      <nav className="flex flex-wrap gap-1 text-sm">
         {tabs.map((t) => (
           <Link
             key={t.key}

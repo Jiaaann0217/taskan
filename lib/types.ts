@@ -43,6 +43,7 @@ export type Team = {
   goal_date : string | null;
   archived_at : string | null;
   created_at : string;
+  repo_url : string | null; // AI が追記：チームの GitHub（supabase/007）
 };
 
 // ── ここから AI が書いた ───────────────────────────
@@ -55,6 +56,10 @@ export type Milestone = {
   name: string;
   position: number;
   created_at: string;
+  // ここから supabase/007 で足した（ロードマップ用）
+  start_date: string | null;
+  due_date: string | null;
+  description: string | null; // この段階で何を作るか
 };
 
 // tasks は昔 Supabase の画面で作った表に、002 の ④ で列を足したもの。
@@ -71,4 +76,28 @@ export type Task = {
   deadline: string | null;
   created_at: string;
   updated_at: string; // 最後に変わった時刻（supabase/006 で足した）
+};
+
+// 質問箱（supabase/007）
+export type QuestionStatus = "open" | "answered" | "resolved"; // 未回答・回答あり・解決
+
+export type Question = {
+  id: string;
+  team_id: string;
+  body: string;
+  asked_by: string;
+  status: QuestionStatus;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type Answer = {
+  id: string;
+  question_id: string;
+  team_id: string;
+  body: string;
+  answered_by: string;
+  sources: string | null;            // AI が参照した資料と日付
+  corrects_answer_id: string | null; // 訂正なら、どの答えを直したか
+  created_at: string;
 };
