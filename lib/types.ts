@@ -70,4 +70,5 @@ export type Task = {
   assignee_user_id: string | null;
   deadline: string | null;
   created_at: string;
+  updated_at: string; // 最後に変わった時刻（supabase/006 で足した）
 };

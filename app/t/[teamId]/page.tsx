@@ -2,97 +2,185 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import type { Milestone, Task, Team, TeamMember } from "@/lib/types";
+import {
+  IDLE_DAYS,
+  calcProgress,
+  countByMember,
+  daysBetween,
+  findStuckTasks,
+  milestoneProgress,
+  tasksThisWeek,
+} from "@/lib/dashboard";
 import AppHeader from "../../AppHeader";
-import AddTaskButton from "./AddTaskButton";
-import TaskItem from "./TaskItem";
+import TeamNav from "./TeamNav";
 
 export const dynamic = "force-dynamic";
 
-// ② チームのホーム：タスクを段階ごとに並べる
-export default async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
-  const { teamId } = await params; // URL の /t/〇〇 の〇〇
+// ダッシュボード：開いた瞬間に「どこまで進んだか／次に何をやるか／誰が止まっているか」が分かる
+export default async function DashboardPage({ params }: { params: Promise<{ teamId: string }> }) {
+  const { teamId } = await params;
   const supabase = await createSupabaseServerClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const myId = claims?.claims?.sub;
 
-  // 4つの表を同時に読む。どれもルール（RLS）で「メンバーだけ」に絞られている
   const [teamRes, milestonesRes, tasksRes, membersRes] = await Promise.all([
     supabase.from("teams").select("*").eq("id", teamId).maybeSingle(),
     supabase.from("milestones").select("*").eq("team_id", teamId).order("position"),
-    supabase.from("tasks").select("*").eq("team_id", teamId).order("created_at"),
+    supabase.from("tasks").select("*").eq("team_id", teamId),
     supabase.from("team_members").select("*").eq("team_id", teamId).order("joined_at"),
   ]);
 
-  // メンバーでなければ、門番のおかげで team は空で返ってくる → 「見つかりません」
   const team = teamRes.data as Team | null;
   if (!team) notFound();
-
   const milestones = (milestonesRes.data ?? []) as Milestone[];
   const tasks = (tasksRes.data ?? []) as Task[];
   const members = (membersRes.data ?? []) as TeamMember[];
 
-  const myRole = members.find((m) => m.user_id === myId)?.role;
-  const canEdit = myRole === "owner" || myRole === "member";
+  // ここから計算（lib/dashboard.ts）
+  const today = new Date();
   const doneStatus = team.statuses[team.statuses.length - 1];
+  const overall = calcProgress(tasks, doneStatus);
+  const stages = milestoneProgress(milestones, tasks, doneStatus);
+  const thisWeek = tasksThisWeek(tasks, doneStatus, today);
+  const stuck = findStuckTasks(tasks, doneStatus, today); // ★本人
+  const byMember = countByMember(tasks, members, doneStatus, stuck); // ★本人
 
-  // 段階ごとに分ける。段階が決まっていないタスクは「段階なし」へ
-  const groups = [
-    ...milestones.map((m) => ({ id: m.id as string | null, name: m.name })),
-    { id: null, name: "段階なし" },
-  ].map((g) => ({ ...g, tasks: tasks.filter((t) => t.milestone_id === g.id) }));
-
-  const doneCount = tasks.filter((t) => t.status === doneStatus).length;
+  const nameOf = (userId: string | null) =>
+    members.find((m) => m.user_id === userId)?.display_name ?? "担当なし";
+  const daysLeft = team.goal_date ? -daysBetween(team.goal_date, today) : null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
+    <main className="mx-auto min-h-screen max-w-4xl p-4 text-gray-900 md:p-8">
       <AppHeader>
-        <span className="text-gray-400">/</span>
-        <span className="font-bold">{team.name}</span>
-        <Link href={`/t/${team.id}/settings`} className="text-sm text-gray-600 hover:underline">
-          設定
-        </Link>
+        <TeamNav teamId={team.id} teamName={team.name} current="dashboard" />
       </AppHeader>
 
-      <p className="mb-6 text-sm text-gray-600">
-        全体：{doneCount} / {tasks.length} 完了
-        {milestones.length === 0 && "　（段階は「設定」で作れます）"}
-      </p>
-
-      <div className="space-y-6">
-        {groups
-          .filter((g) => g.id !== null || g.tasks.length > 0 || milestones.length === 0)
-          .map((g) => {
-            const done = g.tasks.filter((t) => t.status === doneStatus).length;
-            return (
-              <section key={g.id ?? "none"}>
-                <h2 className="mb-2 font-bold">
-                  {g.name} <span className="text-sm font-normal text-gray-600">{done}/{g.tasks.length}</span>
-                </h2>
-                <div className="space-y-2">
-                  {g.tasks.map((t) => (
-                    <TaskItem
-                      key={t.id}
-                      task={t}
-                      statuses={team.statuses}
-                      milestones={milestones}
-                      members={members}
-                      canEdit={canEdit}
-                    />
-                  ))}
-                  {canEdit && (
-                    <AddTaskButton
-                      teamId={team.id}
-                      statuses={team.statuses}
-                      milestones={milestones}
-                      members={members}
-                      milestoneId={g.id}
-                    />
-                  )}
+      {/* 上の3つの数字 */}
+      <div className="mb-6 grid gap-3 md:grid-cols-3">
+        <div className="rounded bg-white p-4 shadow-sm">
+          <div className="text-xs text-gray-500">ゴール</div>
+          {team.goal ? (
+            <>
+              <div className="font-bold">{team.goal}</div>
+              {daysLeft !== null && (
+                <div className="text-xs text-gray-500">
+                  {daysLeft >= 0 ? `あと ${daysLeft}日（${team.goal_date}）` : `${-daysLeft}日 過ぎた`}
                 </div>
-              </section>
-            );
-          })}
+              )}
+            </>
+          ) : (
+            <Link href={`/t/${team.id}/settings`} className="text-sm text-gray-500 hover:underline">
+              「設定」でゴールを決める
+            </Link>
+          )}
+        </div>
+        <div className="rounded bg-white p-4 shadow-sm">
+          <div className="text-xs text-gray-500">全体の進み具合</div>
+          <div className="text-2xl font-bold">{overall.percent}%</div>
+          <Bar percent={overall.percent} />
+          <div className="mt-1 text-xs text-gray-500">{overall.done} / {overall.total} 完了</div>
+        </div>
+        <div className="rounded bg-white p-4 shadow-sm">
+          <div className="text-xs text-gray-500">止まっているもの</div>
+          <div className={`text-2xl font-bold ${stuck.length > 0 ? "text-red-600" : ""}`}>{stuck.length}</div>
+          <div className="text-xs text-gray-500">
+            期限切れ {stuck.filter((s) => s.reason === "overdue").length} ・ {IDLE_DAYS}日動きなし{" "}
+            {stuck.filter((s) => s.reason === "idle").length}
+          </div>
+        </div>
       </div>
+
+      {/* 段階 */}
+      <section className="mb-6 rounded bg-white p-4 shadow-sm">
+        <h2 className="mb-3 font-bold">段階</h2>
+        {stages.length === 0 ? (
+          <Link href={`/t/${team.id}/settings`} className="text-sm text-gray-500 hover:underline">
+            「設定」で段階を作ると、ここに進み具合が出ます
+          </Link>
+        ) : (
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 text-sm">
+            {stages.map((s, i) => (
+              <div key={s.milestone.id} className="contents">
+                <span className={s.isCurrent ? "font-bold" : ""}>
+                  {i + 1} {s.milestone.name}
+                  {s.isCurrent && (
+                    <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-700">いまここ</span>
+                  )}
+                </span>
+                <Bar percent={s.progress.percent} done={s.progress.percent === 100} />
+                <span className="text-gray-500">{s.progress.done}/{s.progress.total}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* 今週やること・止まっているもの */}
+      <div className="mb-6 grid gap-3 md:grid-cols-2">
+        <section className="rounded bg-white p-4 shadow-sm">
+          <h2 className="mb-2 font-bold">今週やること</h2>
+          {thisWeek.length === 0 ? (
+            <p className="text-sm text-gray-500">締め切りが7日以内のタスクはありません</p>
+          ) : (
+            <ul className="divide-y text-sm">
+              {thisWeek.map((t) => (
+                <li key={t.id} className="py-1.5">
+                  {t.title}{" "}
+                  <span className="text-xs text-gray-500">{nameOf(t.assignee_user_id)} ・ {t.deadline}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section className={`rounded bg-white p-4 shadow-sm ${stuck.length > 0 ? "ring-1 ring-red-300" : ""}`}>
+          <h2 className="mb-2 font-bold">止まっているもの</h2>
+          {stuck.length === 0 ? (
+            <p className="text-sm text-gray-500">ありません</p>
+          ) : (
+            <ul className="divide-y text-sm">
+              {stuck.map((s) => (
+                <li key={s.task.id} className="py-1.5">
+                  {s.task.title}{" "}
+                  <span className={`text-xs ${s.reason === "overdue" ? "text-red-600" : "text-gray-500"}`}>
+                    {s.reason === "overdue" ? `締め切りを ${s.days}日 過ぎた` : `${s.days}日 動きなし`}
+                    {" ・ "}{nameOf(s.task.assignee_user_id)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* メンバー */}
+      <section className="rounded bg-white p-4 shadow-sm">
+        <h2 className="mb-2 font-bold">メンバー</h2>
+        {byMember.length === 0 ? (
+          <p className="text-sm text-gray-500">まだ数えられていません（countByMember を書くと出ます）</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-4">
+            {byMember.map((c) => (
+              <div key={c.member.user_id} className="rounded bg-gray-50 p-2">
+                <div className="font-bold">{c.member.display_name}</div>
+                <div className="text-xs text-gray-600">
+                  残り {c.open} ・ 完了 {c.done}
+                  {c.stuck > 0 && <span className="text-red-600"> ・ 止まっている {c.stuck}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </main>
+  );
+}
+
+// 進み具合の棒
+function Bar({ percent, done = false }: { percent: number; done?: boolean }) {
+  return (
+    <div className="h-1.5 w-full rounded bg-gray-200">
+      <div
+        className={`h-1.5 rounded ${done ? "bg-green-500" : "bg-blue-500"}`}
+        style={{ width: `${percent}%` }}
+      />
+    </div>
   );
 }

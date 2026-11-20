@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import type { Milestone, Team, TeamMember } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
+import TeamNav from "../TeamNav";
 import { InviteCode, MilestoneEditor, TeamEditor } from "./SettingsForms";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +33,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
   return (
     <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
       <AppHeader>
-        <span className="text-gray-400">/</span>
-        <Link href={`/t/${team.id}`} className="font-bold hover:underline">{team.name}</Link>
-        <span className="text-gray-400">/</span>
-        <span className="text-sm">設定</span>
+        <TeamNav teamId={team.id} teamName={team.name} current="settings" />
       </AppHeader>
 
       <div className="space-y-8">
@@ -69,7 +66,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
 
         {myRole === "owner" && (
           <section>
-            <h2 className="mb-2 font-bold">チーム名とステータス（作った人だけ）</h2>
+            <h2 className="mb-2 font-bold">チーム名・ゴール・ステータス（作った人だけ）</h2>
             <TeamEditor team={team} />
           </section>
         )}

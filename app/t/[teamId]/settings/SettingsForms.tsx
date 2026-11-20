@@ -86,6 +86,8 @@ export function TeamEditor({ team }: { team: Team }) {
   const router = useRouter();
   const [name, setName] = useState(team.name);
   const [statusText, setStatusText] = useState(team.statuses.join("\n"));
+  const [goal, setGoal] = useState(team.goal ?? "");
+  const [goalDate, setGoalDate] = useState(team.goal_date ?? "");
   const [message, setMessage] = useState("");
 
   const save = async (e: React.FormEvent) => {
@@ -96,7 +98,7 @@ export function TeamEditor({ team }: { team: Team }) {
       setMessage("ステータスは2つ以上にしてください");
       return;
     }
-    const { error } = await supabase.from("teams").update({ name, statuses }).eq("id", team.id);
+    const { error } = await supabase.from("teams").update({ name, statuses, goal: goal || null, goal_date: goalDate || null }).eq("id", team.id);
     setMessage(error ? `保存できませんでした：${error.message}` : "保存しました");
     router.refresh();
   };
@@ -105,6 +107,16 @@ export function TeamEditor({ team }: { team: Team }) {
     <form onSubmit={save} className="space-y-2">
       <label className="block text-sm text-gray-600">チーム名</label>
       <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full rounded border px-3 py-1" />
+      <label className="block text-sm text-gray-600">ゴール（ダッシュボードの一番上に出る）</label>
+      <div className="flex gap-2">
+        <input
+          value={goal}
+          onChange={(e) => setGoal(e.target.value)}
+          placeholder="例：必須機能を完成させる"
+          className="flex-1 rounded border px-3 py-1"
+        />
+        <input type="date" value={goalDate} onChange={(e) => setGoalDate(e.target.value)} className="rounded border px-3 py-1" />
+      </div>
       <label className="block text-sm text-gray-600">
         ステータス（1行に1つ。上から順に進み、一番下が「完了」）
       </label>
