@@ -32,6 +32,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const openQuestions = (openQuestionsRes.data ?? []) as { status: string }[];
   const unanswered = openQuestions.filter((q) => q.status === "open").length;
 
+  // 読み出しの失敗は 404 にしない（error.tsx へ）。空なら「メンバーではない」→ 404
+  if (teamRes.error) throw new Error(`チームを読めませんでした：${teamRes.error.message}`);
   const team = teamRes.data as Team | null;
   if (!team) notFound();
   const milestones = (milestonesRes.data ?? []) as Milestone[];

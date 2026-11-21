@@ -23,6 +23,7 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
   ]);
 
   // メンバーでなければ、門番のおかげで team は空で返ってくる → 「見つかりません」
+  if (teamRes.error) throw new Error(`チームを読めませんでした：${teamRes.error.message}`);
   const team = teamRes.data as Team | null;
   if (!team) notFound();
 

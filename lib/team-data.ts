@@ -12,6 +12,8 @@ export async function loadTeam(teamId: string) {
     supabase.from("team_members").select("*").eq("team_id", teamId).order("joined_at"),
   ]);
 
+  // 読み出し自体の失敗（通信・認証のエラー）は「見つかりません」にしない → error.tsx の画面へ
+  if (teamRes.error) throw new Error(`チームを読めませんでした：${teamRes.error.message}`);
   // メンバーでなければ、門番のおかげで team は空 → 「見つかりません」
   const team = teamRes.data as Team | null;
   if (!team) notFound();
