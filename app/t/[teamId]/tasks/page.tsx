@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient, getMyClaims } from "@/lib/supabase-server";
 import type { Milestone, Task, Team, TeamMember } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
 import TeamNav from "../TeamNav";
@@ -12,8 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function TasksPage({ params }: { params: Promise<{ teamId: string }> }) {
   const { teamId } = await params; // URL の /t/〇〇 の〇〇
   const supabase = await createSupabaseServerClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const myId = claims?.claims?.sub;
+  const { id: myId } = await getMyClaims();
 
   // 4つの表を同時に読む。どれもルール（RLS）で「メンバーだけ」に絞られている
   const [teamRes, milestonesRes, tasksRes, membersRes] = await Promise.all([

@@ -1,14 +1,13 @@
 // チームの画面で毎回使う「チーム・メンバー・自分の役割」をまとめて読む（サーバー側）
 import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient, getMyClaims } from "@/lib/supabase-server";
 import type { Team, TeamMember } from "@/lib/types";
 
 export async function loadTeam(teamId: string) {
   const supabase = await createSupabaseServerClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const myId = claims?.claims?.sub as string | undefined;
-
-  const [teamRes, membersRes] = await Promise.all([
+  // 3つを同時に問い合わせる（順番に待たない）
+  const [{ id: myId }, teamRes, membersRes] = await Promise.all([
+    getMyClaims(),
     supabase.from("teams").select("*").eq("id", teamId).maybeSingle(),
     supabase.from("team_members").select("*").eq("team_id", teamId).order("joined_at"),
   ]);

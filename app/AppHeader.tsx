@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getMyClaims } from "@/lib/supabase-server";
 import LogoutButton from "./LogoutButton";
 
 // どの画面でも上に出す帯。左にアプリ名（トップへ戻る）、右にメールとログアウト
 export default async function AppHeader({ children }: { children?: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getClaims();
-  const email = data?.claims?.email as string | undefined;
+  const { email } = await getMyClaims();
 
   return (
     <header className="mb-6 flex flex-wrap items-center justify-between gap-2">

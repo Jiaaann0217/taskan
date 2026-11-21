@@ -1,8 +1,10 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 // サーバーコンポーネント用。リクエストの Cookie からログイン中のユーザーを読む
-export async function createSupabaseServerClient() {
+// cache で包むと、1回のページ表示の中では何度呼んでも1回分しか作らない
+export const createSupabaseServerClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -24,4 +26,14 @@ export async function createSupabaseServerClient() {
       },
     }
   );
-}
+});
+
+// ログイン中の人の情報（id とメール）。ヘッダーと各画面で使うが、1回のページ表示で1回だけ確かめる
+export const getMyClaims = cache(async () => {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.auth.getClaims();
+  return {
+    id: data?.claims?.sub as string | undefined,
+    email: data?.claims?.email as string | undefined,
+  };
+});
