@@ -29,8 +29,10 @@ function toJapanese(message: string) {
 
 export default function LoginPage() {
   const router = useRouter();
+  // ログイン後の行き先。招待リンクなどから来たときは ?next= のページへ戻す（このサイトの中だけ）
   const goHome = () => {
-    router.push("/");
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
     router.refresh();
   };
   const [mode, setMode] = useState<"login" | "signup">("login");

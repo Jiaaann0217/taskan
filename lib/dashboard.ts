@@ -5,6 +5,9 @@ import type { Milestone, Task, TeamMember } from "@/lib/types";
 // 何日動きがなければ「止まっている」とするか
 export const IDLE_DAYS = 5;
 
+// 確認待ち（PR レビュー待ちなど）のまま何日たてば「止まっている」とするか
+export const REVIEW_DAYS = 2;
+
 // ── 道具（AI が書いた）──────────────────────────
 
 // from の日時から to まで、何日たったか（小数は切り捨て）
@@ -60,7 +63,7 @@ export function tasksThisWeek(tasks: Task[], doneStatus: string, today: Date): T
 // 止まっているタスク1件分。reason は理由、days は何日か
 export type StuckTask = {
   task: Task;
-  reason: "overdue" | "idle"; // overdue：締め切りを過ぎた　idle：IDLE_DAYS 日以上動きなし
+  reason: "overdue" | "idle" | "review"; // overdue：締め切りを過ぎた　idle：IDLE_DAYS 日以上動きなし　review：確認待ちのまま REVIEW_DAYS 日以上（AI が 11/21 に追加）
   days: number;               // overdue なら締め切りから何日過ぎたか、idle なら何日動きがないか
 };
 
@@ -137,4 +140,33 @@ export function countByMember(
         stuck: stuck.filter((s) => s.task.assignee_user_id ===　member.user_id).length, // 止まっている
       };
     });
+}
+
+// ── 確認待ち（AI が 11/21 に追加）────────────────────────
+
+// 確認待ちのステータス：完了のひとつ手前（例：「PR 確認中」）。ステータスが2つしかなければ、ない
+export function reviewStatusOf(statuses: string[]): string | null {
+  return statuses.length >= 3 ? statuses[statuses.length - 2] : null;
+}
+
+export type ReviewTask = { task: Task; days: number }; // days：最後に変わってから何日
+
+// 確認待ちのタスク（長く待っている順）
+export function reviewWaiting(tasks: Task[], statuses: string[], today: Date): ReviewTask[] {
+  const reviewStatus = reviewStatusOf(statuses);
+  if (!reviewStatus) return [];
+  return tasks
+    .filter((t) => t.status === reviewStatus)
+    .map((t) => ({ task: t, days: daysBetween(t.updated_at, today) }))
+    .sort((a, b) => b.days - a.days);
+}
+
+// 止まっているもの（findStuckTasks の結果）に、確認待ちのまま REVIEW_DAYS 日以上のものを足す。
+// すでに入っているタスク（期限切れなど）は二重に数えない
+export function addReviewStuck(stuck: StuckTask[], review: ReviewTask[]): StuckTask[] {
+  const already = new Set(stuck.map((s) => s.task.id));
+  const extra = review
+    .filter((r) => r.days >= REVIEW_DAYS && !already.has(r.task.id))
+    .map((r) => ({ task: r.task, reason: "review" as const, days: r.days }));
+  return [...stuck, ...extra];
 }

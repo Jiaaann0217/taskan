@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 // 招待コードで参加するフォーム（ブラウザで動く）
-export default function JoinTeamForm() {
+// initialCode：招待リンク（/join?code=…）から来たときに、最初から入れておくコード（AI が 11/21 に追加）
+export default function JoinTeamForm({ initialCode = "" }: { initialCode?: string }) {
   const router = useRouter();
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [myName, setMyName] = useState("");
   const [message, setMessage] = useState("");
 

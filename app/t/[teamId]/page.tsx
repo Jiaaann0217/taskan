@@ -4,11 +4,15 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import type { Milestone, Task, Team, TeamMember } from "@/lib/types";
 import {
   IDLE_DAYS,
+  REVIEW_DAYS,
+  addReviewStuck,
   calcProgress,
   countByMember,
   daysBetween,
   findStuckTasks,
   milestoneProgress,
+  reviewStatusOf,
+  reviewWaiting,
   tasksThisWeek,
 } from "@/lib/dashboard";
 import AppHeader from "../../AppHeader";
@@ -46,7 +50,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const overall = calcProgress(tasks, doneStatus);
   const stages = milestoneProgress(milestones, tasks, doneStatus);
   const thisWeek = tasksThisWeek(tasks, doneStatus, today);
-  const stuck = findStuckTasks(tasks, doneStatus, today); // ★本人
+  const review = reviewWaiting(tasks, team.statuses, today); // 確認待ち（完了のひとつ手前）
+  const reviewStatus = reviewStatusOf(team.statuses);
+  // ★本人の findStuckTasks に、確認待ちのまま REVIEW_DAYS 日以上のものを足す
+  const stuck = addReviewStuck(findStuckTasks(tasks, doneStatus, today), review);
   const byMember = countByMember(tasks, members, doneStatus, stuck); // ★本人
 
   const nameOf = (userId: string | null) =>
@@ -90,6 +97,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
           <div className="text-xs text-gray-500">
             期限切れ {stuck.filter((s) => s.reason === "overdue").length} ・ {IDLE_DAYS}日動きなし{" "}
             {stuck.filter((s) => s.reason === "idle").length}
+            {reviewStatus && <> ・ 確認待ち{REVIEW_DAYS}日以上 {stuck.filter((s) => s.reason === "review").length}</>}
           </div>
         </div>
         <Link href={`/t/${team.id}/questions`} className="rounded bg-white p-4 shadow-sm hover:bg-gray-50">
@@ -158,7 +166,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
                 <li key={s.task.id} className="py-1.5">
                   {s.task.title}{" "}
                   <span className={`text-xs ${s.reason === "overdue" ? "text-red-600" : "text-gray-500"}`}>
-                    {s.reason === "overdue" ? `締め切りを ${s.days}日 過ぎた` : `${s.days}日 動きなし`}
+                    {s.reason === "overdue"
+                      ? `締め切りを ${s.days}日 過ぎた`
+                      : s.reason === "review"
+                        ? `${reviewStatus}のまま ${s.days}日`
+                        : `${s.days}日 動きなし`}
                     {" ・ "}{nameOf(s.task.assignee_user_id)}
                   </span>
                 </li>
@@ -167,6 +179,29 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
           )}
         </section>
       </div>
+
+      {/* 確認待ち（PR のレビュー待ちなど）。止まる前から見えるように、全部出す */}
+      {reviewStatus && (
+        <section className="mb-6 rounded bg-white p-4 shadow-sm">
+          <h2 className="mb-2 font-bold">
+            {reviewStatus} <span className="text-sm font-normal text-gray-500">{review.length}件</span>
+          </h2>
+          {review.length === 0 ? (
+            <p className="text-sm text-gray-500">ありません</p>
+          ) : (
+            <ul className="divide-y text-sm">
+              {review.map((r) => (
+                <li key={r.task.id} className="py-1.5">
+                  {r.task.title}{" "}
+                  <span className={`text-xs ${r.days >= REVIEW_DAYS ? "text-red-600" : "text-gray-500"}`}>
+                    {r.days === 0 ? "今日から" : `${r.days}日 待ち`} ・ {nameOf(r.task.assignee_user_id)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* メンバー */}
       <section className="rounded bg-white p-4 shadow-sm">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { loadTeam } from "@/lib/team-data";
 import AppHeader from "../../../AppHeader";
 import TeamNav from "../TeamNav";
-import { InviteCode, RoleSelect, TeamEditor } from "./SettingsForms";
+import { InviteCode, RoleSelect, StatusEditor, TeamEditor } from "./SettingsForms";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
       <div className="space-y-8">
         <section>
           <h2 className="mb-2 font-bold">招待コード</h2>
-          <p className="mb-2 text-sm text-gray-600">メンバーに送ると、トップの「招待コードで参加」から入れます。</p>
+          <p className="mb-2 text-sm text-gray-600">
+            招待リンクを送ると、開いた人の参加欄にコードが入った状態になります。コードだけ送って、トップの「招待コードで参加」に打ってもらうこともできます。
+          </p>
           <InviteCode code={team.invite_code} />
         </section>
 
@@ -59,8 +61,15 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
 
         {isOwner && (
           <section>
-            <h2 className="mb-2 font-bold">チーム名・ゴール・GitHub・ステータス（作った人だけ）</h2>
+            <h2 className="mb-2 font-bold">チーム名・ゴール・GitHub（作った人だけ）</h2>
             <TeamEditor team={team} />
+          </section>
+        )}
+
+        {isOwner && (
+          <section>
+            <h2 className="mb-2 font-bold">ステータス（作った人だけ）</h2>
+            <StatusEditor team={team} />
           </section>
         )}
       </div>

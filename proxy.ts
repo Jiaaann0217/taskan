@@ -32,13 +32,22 @@ export async function proxy(request: NextRequest) {
   const isLoginPage = request.nextUrl.pathname.startsWith("/login");
 
   if (!isLoggedIn && !isLoginPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // 開こうとしていたページを next に覚えておき、ログイン後に戻す（招待リンクなど）
+    const login = new URL("/login", request.url);
+    const { pathname, search } = request.nextUrl;
+    if (pathname !== "/") login.searchParams.set("next", pathname + search);
+    return NextResponse.redirect(login);
   }
   if (isLoggedIn && isLoginPage) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url));
   }
 
   return response;
+}
+
+// 戻り先は、このサイトの中のページだけにする（よそのサイトへ飛ばされないように）
+function safeNext(next: string | null) {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
 }
 
 export const config = {

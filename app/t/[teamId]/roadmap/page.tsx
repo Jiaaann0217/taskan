@@ -122,26 +122,41 @@ function Timeline({ milestones, goalDate, today }: { milestones: Milestone[]; go
   return (
     <section className="mb-6 rounded bg-white p-4 shadow-sm">
       <h2 className="mb-2 font-bold">期間</h2>
-      <div className="relative space-y-1.5">
-        {todayIn && (
-          <div className="absolute top-0 bottom-0 z-10 w-px bg-red-500" style={{ left: pos(today.getTime()) }}>
-            <span className="absolute -top-4 -translate-x-1/2 text-[10px] text-red-600">今日</span>
-          </div>
-        )}
-        {dated.map((m) => {
-          const s = toTime(m.start_date!);
-          const e = toTime(m.due_date!) + dayMs;
-          return (
-            <div key={m.id} className="relative h-6 rounded bg-gray-100">
-              <div
-                className="absolute h-6 truncate rounded bg-blue-200 px-2 text-xs leading-6 text-blue-900"
-                style={{ left: pos(s), width: `calc(${pos(e)} - ${pos(s)})` }}
-              >
-                {m.name}
+      {/* 左に段階の名前（切れないように帯の外に出す）、右に帯。狭い画面では横にスクロールできる */}
+      <div className="overflow-x-auto">
+        <div className="grid min-w-[560px] grid-cols-[minmax(7rem,max-content)_1fr] items-center gap-x-3 gap-y-1.5">
+          {dated.map((m) => {
+            const s = toTime(m.start_date!);
+            const e = toTime(m.due_date!) + dayMs;
+            return (
+              <div key={m.id} className="contents">
+                <span className="text-xs text-gray-700" title={`${m.start_date} 〜 ${m.due_date}`}>
+                  {m.name}
+                </span>
+                <div className="relative h-5 rounded bg-gray-100">
+                  <div
+                    className="absolute h-5 rounded bg-blue-300"
+                    style={{ left: pos(s), width: `calc(${pos(e)} - ${pos(s)})` }}
+                    title={`${m.start_date} 〜 ${m.due_date}`}
+                  />
+                  {todayIn && (
+                    <div className="absolute top-0 bottom-0 w-px bg-red-500" style={{ left: pos(today.getTime()) }} />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          {todayIn && (
+            <div className="contents">
+              <span />
+              <div className="relative h-4">
+                <span className="absolute -translate-x-1/2 text-[10px] text-red-600" style={{ left: pos(today.getTime()) }}>
+                  今日
+                </span>
               </div>
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
     </section>
   );
