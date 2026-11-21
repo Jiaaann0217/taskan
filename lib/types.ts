@@ -76,6 +76,7 @@ export type Task = {
   status: string | null;
   assignee_user_id: string | null;
   assignee_role: string | null; // 役割で担当を付けたとき（supabase/009）。assignee_user_id が空のときに使う
+  pr_urls: string[]; // GitHub の PR の URL（supabase/010）。空なら、タイトル・完了の条件の「#24」を読む
   deadline: string | null;
   created_at: string;
   updated_at: string; // 最後に変わった時刻（supabase/006 で足した）

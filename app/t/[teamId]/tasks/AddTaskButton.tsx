@@ -10,6 +10,7 @@ type Props = {
   milestones: Milestone[];
   members: TeamMember[];
   roles: string[];
+  repoUrl: string | null;
   milestoneId: string | null; // どの段階に足すか
 };
 

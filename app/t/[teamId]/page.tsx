@@ -17,6 +17,8 @@ import {
 } from "@/lib/dashboard";
 import AppHeader from "../../AppHeader";
 import { assigneeLabel, withResolvedAssignees } from "@/lib/assignee";
+import { loadPrs, readyToClose } from "@/lib/github";
+import PrBadges from "./PrBadges";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const stages = milestoneProgress(milestones, tasks, doneStatus);
   const thisWeek = tasksThisWeek(tasks, doneStatus, today);
   const review = reviewWaiting(tasks, team.statuses, today); // 確認待ち（完了のひとつ手前）
+  // GitHub の PR の状態は、まだ完了していないタスクの分だけ読む（lib/github.ts）
+  const prs = await loadPrs(tasks.filter((t) => t.status !== doneStatus), team.repo_url);
+  const mergedNotDone = tasks.filter((t) => t.status !== doneStatus && readyToClose(prs[t.id] ?? []));
   const reviewStatus = reviewStatusOf(team.statuses);
   // ★本人の findStuckTasks に、確認待ちのまま REVIEW_DAYS 日以上のものを足す
   const stuck = addReviewStuck(findStuckTasks(tasks, doneStatus, today), review);
@@ -177,6 +182,25 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
         </section>
       </div>
 
+      {/* PR がマージ済みなのに、まだ完了にしていないタスク（完了にしてよいもの） */}
+      {mergedNotDone.length > 0 && (
+        <section className="mb-6 rounded bg-purple-50 p-4 shadow-sm ring-1 ring-purple-200">
+          <h2 className="mb-1 font-bold">
+            PR はマージ済み（完了にしてよい） <span className="text-sm font-normal text-gray-500">{mergedNotDone.length}件</span>
+          </h2>
+          <p className="mb-2 text-xs text-gray-600">「タスク一覧」で「完了にする」を押すか、ステータスを完了にしてください。</p>
+          <ul className="divide-y text-sm">
+            {mergedNotDone.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center gap-2 py-1.5">
+                {t.title}
+                <span className="text-xs text-gray-500">{assigneeLabel(t, members)}</span>
+                <span className="flex flex-wrap gap-1 text-xs"><PrBadges prs={prs[t.id] ?? []} /></span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* 確認待ち（PR のレビュー待ちなど）。止まる前から見えるように、全部出す */}
       {reviewStatus && (
         <section className="mb-6 rounded bg-white p-4 shadow-sm">
@@ -188,11 +212,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
           ) : (
             <ul className="divide-y text-sm">
               {review.map((r) => (
-                <li key={r.task.id} className="py-1.5">
-                  {r.task.title}{" "}
+                <li key={r.task.id} className="flex flex-wrap items-center gap-2 py-1.5">
+                  {r.task.title}
                   <span className={`text-xs ${r.days >= REVIEW_DAYS ? "text-red-600" : "text-gray-500"}`}>
                     {r.days === 0 ? "今日から" : `${r.days}日 待ち`} ・ {assigneeLabel(r.task, members)}
                   </span>
+                  <span className="flex flex-wrap gap-1 text-xs"><PrBadges prs={prs[r.task.id] ?? []} /></span>
                 </li>
               ))}
             </ul>

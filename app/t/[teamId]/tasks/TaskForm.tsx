@@ -12,6 +12,7 @@ type Props = {
   milestones: Milestone[];
   members: TeamMember[];
   roles: string[]; // チームの役割（例：フロントA）。担当を役割で付けられる
+  repoUrl: string | null; // チームの GitHub。「#24」をこのリポジトリの PR の URL にする
   task?: Task; // あれば「直す」、なければ「足す」
   defaultMilestoneId?: string | null;
   onDone: () => void; // 保存・取り消しのあとに呼ぶ（フォームを閉じる）
@@ -24,6 +25,7 @@ export default function TaskForm({
   milestones,
   members,
   roles,
+  repoUrl,
   task,
   defaultMilestoneId = null,
   onDone,
@@ -35,6 +37,7 @@ export default function TaskForm({
   const [assignee, setAssignee] = useState(assigneeValue(task)); // "user:<id>" か "role:<役割>" か ""
   const [status, setStatus] = useState(task?.status ?? statuses[0]);
   const [deadline, setDeadline] = useState(task?.deadline ?? "");
+  const [prText, setPrText] = useState((task?.pr_urls ?? []).join(" ")); // PR の URL か #番号（スペース区切り）
   const [message, setMessage] = useState("");
 
   const handleSave = async (e: React.FormEvent) => {
@@ -49,6 +52,7 @@ export default function TaskForm({
       ...parseAssigneeValue(assignee),
       status,
       deadline: deadline || null,
+      pr_urls: toPrUrls(prText, repoUrl),
     };
 
     const { error } = task
@@ -129,6 +133,12 @@ export default function TaskForm({
           className="rounded border bg-white px-2 py-1"
         />
       </div>
+      <input
+        value={prText}
+        onChange={(e) => setPrText(e.target.value)}
+        placeholder="PR（例：#24 #25 や https://github.com/…/pull/24）。空なら、タイトルと完了の条件の #番号を読む"
+        className="w-full rounded border bg-white px-2 py-1"
+      />
       <div className="flex gap-2">
         <button className="rounded bg-gray-900 px-3 py-1 text-white hover:bg-gray-700">
           {task ? "保存" : "足す"}
@@ -145,4 +155,15 @@ export default function TaskForm({
       {message && <p className="text-red-600">{message}</p>}
     </form>
   );
+}
+
+// 「#24 https://github.com/o/r/pull/25」→ PR の URL の配列。#番号はチームのリポジトリの PR にする
+function toPrUrls(text: string, repoUrl: string | null): string[] {
+  const base = (repoUrl ?? "").replace(/\/+$/, "");
+  return text
+    .split(/[\s,、]+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => (/^#?\d+$/.test(t) && base ? `${base}/pull/${t.replace("#", "")}` : t))
+    .filter((t) => /github\.com\/[^/]+\/[^/]+\/pull\/\d+/.test(t));
 }

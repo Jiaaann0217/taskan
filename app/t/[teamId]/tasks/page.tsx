@@ -4,6 +4,7 @@ import type { Milestone, Task, Team, TeamMember } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
 import AddTaskButton from "./AddTaskButton";
 import BulkAdd from "./BulkAdd";
+import { hasGithubToken, loadPrs, readyToClose } from "@/lib/github";
 import TaskItem from "./TaskItem";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
   const milestones = (milestonesRes.data ?? []) as Milestone[];
   const tasks = (tasksRes.data ?? []) as Task[];
   const members = (membersRes.data ?? []) as TeamMember[];
+  // GitHub の PR の状態（タスクの PR 欄、なければタイトル・完了の条件の #番号）
+  const prs = await loadPrs(tasks, team.repo_url);
 
   const myRole = members.find((m) => m.user_id === myId)?.role;
   const canEdit = myRole === "owner" || myRole === "member";
@@ -51,6 +54,12 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
         全体：{doneCount} / {tasks.length} 完了
         {milestones.length === 0 && "　（段階は「ロードマップ」で作れます）"}
       </p>
+
+      {team.repo_url && !hasGithubToken() && (
+        <p className="mb-3 rounded bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+          GitHub の鍵（GITHUB_TOKEN）が設定されていないので、PR の状態（マージ済みなど）は表示できません。
+        </p>
+      )}
 
       {canEdit && (
         <div className="mb-6">
@@ -77,7 +86,10 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
                       milestones={milestones}
                       members={members}
                       roles={team.roles}
+                      repoUrl={team.repo_url}
                       canEdit={canEdit}
+                      prs={prs[t.id]}
+                      readyToClose={readyToClose(prs[t.id] ?? [])}
                     />
                   ))}
                   {canEdit && (
@@ -87,6 +99,7 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
                       milestones={milestones}
                       members={members}
                       roles={team.roles}
+                      repoUrl={team.repo_url}
                       milestoneId={g.id}
                     />
                   )}

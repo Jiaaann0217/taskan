@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import type { Milestone, Task, TeamMember } from "@/lib/types";
 import TaskForm from "./TaskForm";
 import { assigneeLabel } from "@/lib/assignee";
+import type { PrInfo } from "@/lib/github";
+import PrBadges from "../PrBadges";
 
 type Props = {
   task: Task;
@@ -13,11 +15,14 @@ type Props = {
   milestones: Milestone[];
   members: TeamMember[];
   roles: string[];
+  repoUrl: string | null;
   canEdit: boolean;
+  prs?: PrInfo[]; // GitHub の PR の状態（サーバーで読んだもの）
+  readyToClose?: boolean; // PR が全部マージ済み → 「完了にする」を出す
 };
 
 // タスク1件の表示。ステータスはその場で切り替えられる。「直す」でフォームに変わる
-export default function TaskItem({ task, statuses, milestones, members, roles, canEdit }: Props) {
+export default function TaskItem({ task, statuses, milestones, members, roles, repoUrl, canEdit, prs = [], readyToClose = false }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
@@ -38,6 +43,7 @@ export default function TaskItem({ task, statuses, milestones, members, roles, c
         milestones={milestones}
         members={members}
         roles={roles}
+        repoUrl={repoUrl}
         task={task}
         onDone={() => setEditing(false)}
       />
@@ -73,6 +79,12 @@ export default function TaskItem({ task, statuses, milestones, members, roles, c
         )}
         <span className="text-gray-600">{assignee}</span>
         {task.deadline && <span className="text-gray-600">締め切り {task.deadline}</span>}
+        <PrBadges prs={prs} />
+        {canEdit && readyToClose && !isDone && (
+          <button onClick={() => changeStatus(doneStatus)} className="rounded bg-purple-600 px-2 py-0.5 text-white hover:bg-purple-700">
+            PR はマージ済み → 完了にする
+          </button>
+        )}
       </div>
     </div>
   );
