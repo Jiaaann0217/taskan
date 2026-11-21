@@ -16,7 +16,6 @@ import {
   tasksThisWeek,
 } from "@/lib/dashboard";
 import AppHeader from "../../AppHeader";
-import TeamNav from "./TeamNav";
 import { assigneeLabel, withResolvedAssignees } from "@/lib/assignee";
 
 export const dynamic = "force-dynamic";
@@ -61,10 +60,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const daysLeft = team.goal_date ? -daysBetween(team.goal_date, today) : null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-4xl p-4 text-gray-900 md:p-8">
-      <AppHeader>
-        <TeamNav teamId={team.id} teamName={team.name} current="dashboard" />
-      </AppHeader>
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
+      <AppHeader team={{ id: team.id, name: team.name }} current="dashboard" />
 
       {/* 上の3つの数字 */}
       <div className="mb-6 grid gap-3 md:grid-cols-4">

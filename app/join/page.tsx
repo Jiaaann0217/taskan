@@ -10,14 +10,14 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
   const { code } = await searchParams;
 
   return (
-    <main className="mx-auto min-h-screen max-w-md p-4 text-gray-900 md:p-8">
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
       <AppHeader />
-      <section className="rounded border bg-white p-4">
+      <section className="mx-auto max-w-md rounded border bg-white p-4">
         <h1 className="mb-1 text-lg font-bold">チームに参加</h1>
         <p className="mb-3 text-sm text-gray-600">チームでのあなたの表示名を入れて「参加」を押してください。</p>
         <JoinTeamForm initialCode={(code ?? "").toUpperCase()} />
       </section>
-      <Link href="/" className="mt-4 block text-sm text-gray-500 hover:underline">
+      <Link href="/" className="mx-auto mt-4 block max-w-md text-sm text-gray-500 hover:underline">
         ← トップへ
       </Link>
     </main>

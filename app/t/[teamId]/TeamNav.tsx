@@ -1,14 +1,10 @@
 import Link from "next/link";
 
-type Props = {
-  teamId: string;
-  teamName: string;
-  current: "dashboard" | "roadmap" | "tasks" | "questions" | "settings";
-};
+export type TeamTab = "dashboard" | "roadmap" | "tasks" | "questions" | "settings";
 
-// チームの中の切り替え
-export default function TeamNav({ teamId, teamName, current }: Props) {
-  const tabs = [
+// チームの中の切り替え（ヘッダーの2行目）。タブが多くても改行せず、狭い画面では横にスクロールする
+export default function TeamNav({ teamId, current }: { teamId: string; current: TeamTab }) {
+  const tabs: { key: TeamTab; label: string; href: string }[] = [
     { key: "dashboard", label: "ダッシュボード", href: `/t/${teamId}` },
     { key: "roadmap", label: "ロードマップ", href: `/t/${teamId}/roadmap` },
     { key: "tasks", label: "タスク一覧", href: `/t/${teamId}/tasks` },
@@ -17,22 +13,18 @@ export default function TeamNav({ teamId, teamName, current }: Props) {
   ];
 
   return (
-    <>
-      <span className="text-gray-400">/</span>
-      <span className="font-bold">{teamName}</span>
-      <nav className="flex flex-wrap gap-1 text-sm">
-        {tabs.map((t) => (
-          <Link
-            key={t.key}
-            href={t.href}
-            className={`rounded px-2 py-1 ${
-              t.key === current ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-    </>
+    <nav className="flex gap-1 overflow-x-auto px-4 text-sm whitespace-nowrap md:px-8">
+      {tabs.map((t) => (
+        <Link
+          key={t.key}
+          href={t.href}
+          className={`shrink-0 border-b-2 px-3 py-2 ${
+            t.key === current ? "border-gray-900 font-bold text-gray-900" : "border-transparent text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

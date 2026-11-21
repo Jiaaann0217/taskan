@@ -11,7 +11,7 @@ export default async function Home() {
   const teams = await getMyTeams(); // ★本人が書いた関数
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
       <AppHeader />
 
       <section className="mb-8">

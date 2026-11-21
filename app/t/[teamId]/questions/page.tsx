@@ -1,7 +1,6 @@
 import { loadTeam } from "@/lib/team-data";
 import type { Answer, Question } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
-import TeamNav from "../TeamNav";
 import { AskForm, QuestionCard } from "./QuestionParts";
 
 export const dynamic = "force-dynamic";
@@ -37,10 +36,8 @@ export default async function QuestionsPage({ params }: { params: Promise<{ team
   );
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
-      <AppHeader>
-        <TeamNav teamId={team.id} teamName={team.name} current="questions" />
-      </AppHeader>
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
+      <AppHeader team={{ id: team.id, name: team.name }} current="questions" />
 
       {canEdit && (
         <section className="mb-6 rounded bg-white p-4 shadow-sm">

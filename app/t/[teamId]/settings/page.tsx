@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { loadTeam } from "@/lib/team-data";
 import AppHeader from "../../../AppHeader";
-import TeamNav from "../TeamNav";
 import { InviteCode, RoleSelect, RolesEditor, StatusEditor, TeamEditor, TeamRoleSelect } from "./SettingsForms";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +13,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
   const { team, members, myId, isOwner } = await loadTeam(teamId);
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
-      <AppHeader>
-        <TeamNav teamId={team.id} teamName={team.name} current="settings" />
-      </AppHeader>
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
+      <AppHeader team={{ id: team.id, name: team.name }} current="settings" />
 
       <div className="space-y-8">
         <section>

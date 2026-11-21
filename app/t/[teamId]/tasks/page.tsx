@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient, getMyClaims } from "@/lib/supabase-server";
 import type { Milestone, Task, Team, TeamMember } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
-import TeamNav from "../TeamNav";
 import AddTaskButton from "./AddTaskButton";
 import BulkAdd from "./BulkAdd";
 import TaskItem from "./TaskItem";
@@ -45,10 +44,8 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
   const doneCount = tasks.filter((t) => t.status === doneStatus).length;
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl p-4 text-gray-900 md:p-8">
-      <AppHeader>
-        <TeamNav teamId={team.id} teamName={team.name} current="tasks" />
-      </AppHeader>
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
+      <AppHeader team={{ id: team.id, name: team.name }} current="tasks" />
 
       <p className="mb-3 text-sm text-gray-600">
         全体：{doneCount} / {tasks.length} 完了

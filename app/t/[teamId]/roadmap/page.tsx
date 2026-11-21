@@ -2,7 +2,6 @@ import { loadTeam } from "@/lib/team-data";
 import { daysBetween, isDone, milestoneProgress } from "@/lib/dashboard";
 import type { Milestone, Task } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
-import TeamNav from "../TeamNav";
 import { AddMilestone, EditMilestone } from "./MilestoneForms";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +23,8 @@ export default async function RoadmapPage({ params }: { params: Promise<{ teamId
   const today = new Date();
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl p-4 text-gray-900 md:p-8">
-      <AppHeader>
-        <TeamNav teamId={team.id} teamName={team.name} current="roadmap" />
-      </AppHeader>
+    <main className="min-h-screen w-full px-4 py-4 text-gray-900 md:px-8 md:py-6">
+      <AppHeader team={{ id: team.id, name: team.name }} current="roadmap" />
 
       <p className="mb-4 text-sm text-gray-600">
         段階を左から順に進めます。期間と「この段階で作るもの」を決めておくと、全員が今どこにいるか分かります。
