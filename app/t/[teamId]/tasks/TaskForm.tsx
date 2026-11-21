@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Milestone, Task, TeamMember } from "@/lib/types";
+import { assigneeValue, parseAssigneeValue } from "@/lib/assignee";
 
 type Props = {
   teamId: string;
   statuses: string[];
   milestones: Milestone[];
   members: TeamMember[];
+  roles: string[]; // チームの役割（例：フロントA）。担当を役割で付けられる
   task?: Task; // あれば「直す」、なければ「足す」
   defaultMilestoneId?: string | null;
   onDone: () => void; // 保存・取り消しのあとに呼ぶ（フォームを閉じる）
@@ -21,6 +23,7 @@ export default function TaskForm({
   statuses,
   milestones,
   members,
+  roles,
   task,
   defaultMilestoneId = null,
   onDone,
@@ -29,7 +32,7 @@ export default function TaskForm({
   const [title, setTitle] = useState(task?.title ?? "");
   const [doneCriteria, setDoneCriteria] = useState(task?.done_criteria ?? "");
   const [milestoneId, setMilestoneId] = useState(task?.milestone_id ?? defaultMilestoneId ?? "");
-  const [assignee, setAssignee] = useState(task?.assignee_user_id ?? "");
+  const [assignee, setAssignee] = useState(assigneeValue(task)); // "user:<id>" か "role:<役割>" か ""
   const [status, setStatus] = useState(task?.status ?? statuses[0]);
   const [deadline, setDeadline] = useState(task?.deadline ?? "");
   const [message, setMessage] = useState("");
@@ -43,7 +46,7 @@ export default function TaskForm({
       title,
       done_criteria: doneCriteria || null,
       milestone_id: milestoneId || null,
-      assignee_user_id: assignee || null,
+      ...parseAssigneeValue(assignee),
       status,
       deadline: deadline || null,
     };
@@ -96,11 +99,23 @@ export default function TaskForm({
         </select>
         <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className="rounded border bg-white px-2 py-1">
           <option value="">担当なし</option>
-          {members
-            .filter((m) => m.role !== "assistant")
-            .map((m) => (
-              <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-            ))}
+          {roles.length > 0 && (
+            <optgroup label="役割で">
+              {roles.map((r) => {
+                const holder = members.find((m) => m.team_role === r);
+                return (
+                  <option key={r} value={`role:${r}`}>{r}{holder ? `（${holder.display_name}）` : ""}</option>
+                );
+              })}
+            </optgroup>
+          )}
+          <optgroup label="人で">
+            {members
+              .filter((m) => m.role !== "assistant")
+              .map((m) => (
+                <option key={m.user_id} value={`user:${m.user_id}`}>{m.display_name}</option>
+              ))}
+          </optgroup>
         </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border bg-white px-2 py-1">
           {statuses.map((s) => (

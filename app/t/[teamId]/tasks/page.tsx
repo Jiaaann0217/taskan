@@ -4,6 +4,7 @@ import type { Milestone, Task, Team, TeamMember } from "@/lib/types";
 import AppHeader from "../../../AppHeader";
 import TeamNav from "../TeamNav";
 import AddTaskButton from "./AddTaskButton";
+import BulkAdd from "./BulkAdd";
 import TaskItem from "./TaskItem";
 
 export const dynamic = "force-dynamic";
@@ -49,10 +50,16 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
         <TeamNav teamId={team.id} teamName={team.name} current="tasks" />
       </AppHeader>
 
-      <p className="mb-6 text-sm text-gray-600">
+      <p className="mb-3 text-sm text-gray-600">
         全体：{doneCount} / {tasks.length} 完了
-        {milestones.length === 0 && "　（段階は「設定」で作れます）"}
+        {milestones.length === 0 && "　（段階は「ロードマップ」で作れます）"}
       </p>
+
+      {canEdit && (
+        <div className="mb-6">
+          <BulkAdd teamId={team.id} statuses={team.statuses} milestones={milestones} members={members} roles={team.roles} />
+        </div>
+      )}
 
       <div className="space-y-6">
         {groups
@@ -72,6 +79,7 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
                       statuses={team.statuses}
                       milestones={milestones}
                       members={members}
+                      roles={team.roles}
                       canEdit={canEdit}
                     />
                   ))}
@@ -81,6 +89,7 @@ export default async function TasksPage({ params }: { params: Promise<{ teamId: 
                       statuses={team.statuses}
                       milestones={milestones}
                       members={members}
+                      roles={team.roles}
                       milestoneId={g.id}
                     />
                   )}

@@ -9,6 +9,7 @@ type Props = {
   statuses: string[];
   milestones: Milestone[];
   members: TeamMember[];
+  roles: string[];
   milestoneId: string | null; // どの段階に足すか
 };
 

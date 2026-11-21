@@ -5,23 +5,25 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Milestone, Task, TeamMember } from "@/lib/types";
 import TaskForm from "./TaskForm";
+import { assigneeLabel } from "@/lib/assignee";
 
 type Props = {
   task: Task;
   statuses: string[];
   milestones: Milestone[];
   members: TeamMember[];
+  roles: string[];
   canEdit: boolean;
 };
 
 // タスク1件の表示。ステータスはその場で切り替えられる。「直す」でフォームに変わる
-export default function TaskItem({ task, statuses, milestones, members, canEdit }: Props) {
+export default function TaskItem({ task, statuses, milestones, members, roles, canEdit }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
   const doneStatus = statuses[statuses.length - 1]; // 一番右のステータスが「完了」
   const isDone = task.status === doneStatus;
-  const assignee = members.find((m) => m.user_id === task.assignee_user_id);
+  const assignee = assigneeLabel(task, members); // 例：「佐藤」「バックA（田中）」
 
   const changeStatus = async (status: string) => {
     await supabase.from("tasks").update({ status }).eq("id", task.id);
@@ -35,6 +37,7 @@ export default function TaskItem({ task, statuses, milestones, members, canEdit 
         statuses={statuses}
         milestones={milestones}
         members={members}
+        roles={roles}
         task={task}
         onDone={() => setEditing(false)}
       />
@@ -68,7 +71,7 @@ export default function TaskItem({ task, statuses, milestones, members, canEdit 
         ) : (
           <span className="rounded border px-1 py-0.5">{task.status}</span>
         )}
-        <span className="text-gray-600">{assignee ? assignee.display_name : "担当なし"}</span>
+        <span className="text-gray-600">{assignee}</span>
         {task.deadline && <span className="text-gray-600">締め切り {task.deadline}</span>}
       </div>
     </div>

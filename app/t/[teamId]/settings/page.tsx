@@ -2,7 +2,7 @@ import Link from "next/link";
 import { loadTeam } from "@/lib/team-data";
 import AppHeader from "../../../AppHeader";
 import TeamNav from "../TeamNav";
-import { InviteCode, RoleSelect, StatusEditor, TeamEditor } from "./SettingsForms";
+import { InviteCode, RoleSelect, RolesEditor, StatusEditor, TeamEditor, TeamRoleSelect } from "./SettingsForms";
 
 export const dynamic = "force-dynamic";
 
@@ -30,17 +30,28 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
 
         <section>
           <h2 className="mb-2 font-bold">メンバー（{members.length}人）</h2>
-          {isOwner && (
-            <p className="mb-2 text-xs text-gray-500">
-              AI 用のアカウントを招待コードで参加させたら、役割を「AI」にしてください。AI は読むことと質問箱に答えることだけできます。
-            </p>
-          )}
+          <p className="mb-2 text-xs text-gray-500">
+            「役割」（フロントA など）を選ぶと、その役割で担当を付けたタスクが、その人の担当になります。自分の役割は自分で選べます。
+            {isOwner && " AI 用のアカウントは、権限を「AI」にしてください（読むことと質問箱に答えることだけできる）。"}
+          </p>
           <ul className="space-y-1">
             {members.map((m) => (
-              <li key={m.user_id} className="flex items-center gap-2 rounded border bg-white px-3 py-1">
+              <li key={m.user_id} className="flex flex-wrap items-center gap-2 rounded border bg-white px-3 py-1">
                 <span>{m.display_name}</span>
                 {m.user_id === myId && <span className="text-sm text-gray-500">（あなた）</span>}
-                <span className="ml-auto text-sm text-gray-500">
+                <span className="ml-auto flex items-center gap-2 text-sm text-gray-500">
+                  {m.role !== "assistant" && (isOwner || m.user_id === myId) ? (
+                    <TeamRoleSelect
+                      teamId={team.id}
+                      userId={m.user_id}
+                      value={m.team_role}
+                      roles={team.roles}
+                      isSelf={m.user_id === myId}
+                    />
+                  ) : (
+                    m.team_role && <span>{m.team_role}</span>
+                  )}
+                  <span className="text-xs">権限：</span>
                   {isOwner && m.role !== "owner" ? (
                     <RoleSelect teamId={team.id} userId={m.user_id} role={m.role} />
                   ) : (
@@ -50,6 +61,18 @@ export default async function SettingsPage({ params }: { params: Promise<{ teamI
               </li>
             ))}
           </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-2 font-bold">役割</h2>
+          <p className="mb-2 text-sm text-gray-600">
+            メンバーがまだ参加していなくても、タスクの担当を役割で決めておけます。
+          </p>
+          {isOwner ? (
+            <RolesEditor team={team} />
+          ) : (
+            <p className="text-sm">{team.roles.length ? team.roles.join("、") : "まだありません"}</p>
+          )}
         </section>
 
         <section>

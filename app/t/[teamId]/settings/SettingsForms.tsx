@@ -166,3 +166,97 @@ export function StatusEditor({ team }: { team: Team }) {
     </div>
   );
 }
+
+// メンバーが受け持つ役割（例：フロントA）を選ぶ（supabase/009）
+// 自分の分は自分で、ほかの人の分は owner が関数 set_member_team_role で変える
+export function TeamRoleSelect({
+  teamId,
+  userId,
+  value,
+  roles,
+  isSelf,
+}: {
+  teamId: string;
+  userId: string;
+  value: string | null;
+  roles: string[];
+  isSelf: boolean;
+}) {
+  const router = useRouter();
+  const [message, setMessage] = useState("");
+
+  const change = async (newRole: string) => {
+    const { error } = isSelf
+      ? await supabase.from("team_members").update({ team_role: newRole || null }).eq("team_id", teamId).eq("user_id", userId)
+      : await supabase.rpc("set_member_team_role", { target_team_id: teamId, target_user_id: userId, new_team_role: newRole });
+    setMessage(error ? error.message : "");
+    router.refresh();
+  };
+
+  return (
+    <>
+      <select value={value ?? ""} onChange={(e) => change(e.target.value)} className="rounded border px-1 py-0.5">
+        <option value="">役割なし</option>
+        {roles.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+        {value && !roles.includes(value) && <option value={value}>{value}（一覧にない）</option>}
+      </select>
+      {message && <span className="ml-2 text-red-600">{message}</span>}
+    </>
+  );
+}
+
+// チームの役割の一覧（owner だけ）。タスクの担当を、人の代わりに役割で付けられる
+export function RolesEditor({ team }: { team: Team }) {
+  const router = useRouter();
+  const [roles, setRoles] = useState<string[]>(team.roles);
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
+
+  const save = async (next: string[]) => {
+    const { error } = await supabase.from("teams").update({ roles: next }).eq("id", team.id);
+    if (error) {
+      setMessage(`保存できませんでした：${error.message}`);
+      return;
+    }
+    setRoles(next);
+    setMessage("");
+    router.refresh();
+  };
+
+  const add = (e: React.FormEvent) => {
+    e.preventDefault();
+    const n = name.trim();
+    if (!n || roles.includes(n)) return;
+    setName("");
+    save([...roles, n]);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {roles.length === 0 && <span className="text-sm text-gray-500">まだありません</span>}
+        {roles.map((r) => (
+          <span key={r} className="flex items-center gap-1 rounded border bg-white px-2 py-0.5 text-sm">
+            {r}
+            <button onClick={() => save(roles.filter((x) => x !== r))} className="text-red-600" aria-label={`${r}を消す`}>
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <form onSubmit={add} className="flex gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="役割の名前（例：フロントA）"
+          className="flex-1 rounded border px-3 py-1"
+        />
+        <button className="rounded bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-700">足す</button>
+      </form>
+      <p className="text-xs text-gray-500">役割を消しても、その役割で担当を付けたタスクはそのまま残ります。</p>
+      {message && <p className="text-sm text-red-600">{message}</p>}
+    </div>
+  );
+}

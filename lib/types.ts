@@ -23,6 +23,7 @@ export type TeamMember = {
   display_name: string;
   role: "owner" | "member" | "assistant"; // 3つのどれかしか入らない
   joined_at: string;
+  team_role: string | null; // AI が追記：受け持つ役割（例：フロントA。supabase/009）
 };
 
 // SQL（002 の ①）:
@@ -44,6 +45,7 @@ export type Team = {
   archived_at : string | null;
   created_at : string;
   repo_url : string | null; // AI が追記：チームの GitHub（supabase/007）
+  roles : string[]; // AI が追記：チームの役割の一覧（supabase/009）
 };
 
 // ── ここから AI が書いた ───────────────────────────
@@ -73,6 +75,7 @@ export type Task = {
   done_criteria: string | null; // 完了の条件
   status: string | null;
   assignee_user_id: string | null;
+  assignee_role: string | null; // 役割で担当を付けたとき（supabase/009）。assignee_user_id が空のときに使う
   deadline: string | null;
   created_at: string;
   updated_at: string; // 最後に変わった時刻（supabase/006 で足した）

@@ -53,9 +53,18 @@ async function fetchAll() {
   for (const teamId of teamIds) {
     const [team] = must(await supabase.from("teams").select("*").eq("id", teamId), "チーム");
     if (!team || team.archived_at) continue;
-    const members = must(await supabase.from("team_members").select("user_id, display_name, role").eq("team_id", teamId), "メンバー");
+    const members = must(await supabase.from("team_members").select("user_id, display_name, role, team_role").eq("team_id", teamId), "メンバー");
     const nameOf = (id) => members.find((m) => m.user_id === id)?.display_name ?? "（抜けた人）";
     const roleOf = (id) => members.find((m) => m.user_id === id)?.role;
+    // 担当：人で付けていればその人、役割で付けていれば「役割（その役割のメンバー）」
+    const assigneeOf = (t) => {
+      if (t.assignee_user_id) return nameOf(t.assignee_user_id);
+      if (t.assignee_role) {
+        const m = members.find((x) => x.team_role === t.assignee_role);
+        return `${t.assignee_role}（${m ? m.display_name : "まだいない"}）`;
+      }
+      return null;
+    };
 
     const milestones = must(await supabase.from("milestones").select("*").eq("team_id", teamId).order("position"), "段階");
     const tasks = must(await supabase.from("tasks").select("*").eq("team_id", teamId), "タスク");
@@ -86,9 +95,10 @@ async function fetchAll() {
         description: m.description,
         tasks: tasks
           .filter((t) => t.milestone_id === m.id)
-          .map((t) => ({ title: t.title, status: t.status, done_criteria: t.done_criteria, assignee: t.assignee_user_id ? nameOf(t.assignee_user_id) : null, deadline: t.deadline })),
+          .map((t) => ({ title: t.title, status: t.status, done_criteria: t.done_criteria, assignee: assigneeOf(t), deadline: t.deadline })),
       })),
-      tasks_without_stage: tasks.filter((t) => !t.milestone_id).map((t) => ({ title: t.title, status: t.status, done_criteria: t.done_criteria })),
+      tasks_without_stage: tasks.filter((t) => !t.milestone_id).map((t) => ({ title: t.title, status: t.status, done_criteria: t.done_criteria, assignee: assigneeOf(t) })),
+      members: members.filter((m) => m.role !== "assistant").map((m) => ({ name: m.display_name, team_role: m.team_role })),
       questions: questions.map((q) => {
         const qa = answers.filter((a) => a.question_id === q.id);
         return {

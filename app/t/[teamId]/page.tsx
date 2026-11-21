@@ -17,6 +17,7 @@ import {
 } from "@/lib/dashboard";
 import AppHeader from "../../AppHeader";
 import TeamNav from "./TeamNav";
+import { assigneeLabel, withResolvedAssignees } from "@/lib/assignee";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const team = teamRes.data as Team | null;
   if (!team) notFound();
   const milestones = (milestonesRes.data ?? []) as Milestone[];
-  const tasks = (tasksRes.data ?? []) as Task[];
+  // 役割で担当を付けたタスクも、その役割のメンバーの担当として数える（lib/assignee.ts）
+  const tasks = withResolvedAssignees((tasksRes.data ?? []) as Task[], (membersRes.data ?? []) as TeamMember[]);
   const members = (membersRes.data ?? []) as TeamMember[];
 
   // ここから計算（lib/dashboard.ts）
@@ -56,8 +58,6 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
   const stuck = addReviewStuck(findStuckTasks(tasks, doneStatus, today), review);
   const byMember = countByMember(tasks, members, doneStatus, stuck); // ★本人
 
-  const nameOf = (userId: string | null) =>
-    members.find((m) => m.user_id === userId)?.display_name ?? "担当なし";
   const daysLeft = team.goal_date ? -daysBetween(team.goal_date, today) : null;
 
   return (
@@ -150,7 +150,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
               {thisWeek.map((t) => (
                 <li key={t.id} className="py-1.5">
                   {t.title}{" "}
-                  <span className="text-xs text-gray-500">{nameOf(t.assignee_user_id)} ・ {t.deadline}</span>
+                  <span className="text-xs text-gray-500">{assigneeLabel(t, members)} ・ {t.deadline}</span>
                 </li>
               ))}
             </ul>
@@ -171,7 +171,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
                       : s.reason === "review"
                         ? `${reviewStatus}のまま ${s.days}日`
                         : `${s.days}日 動きなし`}
-                    {" ・ "}{nameOf(s.task.assignee_user_id)}
+                    {" ・ "}{assigneeLabel(s.task, members)}
                   </span>
                 </li>
               ))}
@@ -194,7 +194,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ team
                 <li key={r.task.id} className="py-1.5">
                   {r.task.title}{" "}
                   <span className={`text-xs ${r.days >= REVIEW_DAYS ? "text-red-600" : "text-gray-500"}`}>
-                    {r.days === 0 ? "今日から" : `${r.days}日 待ち`} ・ {nameOf(r.task.assignee_user_id)}
+                    {r.days === 0 ? "今日から" : `${r.days}日 待ち`} ・ {assigneeLabel(r.task, members)}
                   </span>
                 </li>
               ))}
