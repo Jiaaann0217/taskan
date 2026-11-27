@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Taskan
 
-## Getting Started
+チームの「誰が・何を・いつまでに・どこまで進めているか」を一目で見るためのタスク管理アプリです。
 
-First, run the development server:
+## 作ったきっかけ
+
+大学の学園祭実行委員会 Web 班（15名）で、公式サイトの制作が本祭の1か月前に遅れていました。原因は、1・2年生の担当と進み具合を3年生が把握できず、声をかけるべき人が分からなかったことです。
+
+そこで、担当と進捗を3年生全員で共有するためにこのアプリを一人で作りました。約20個のタスクを並べて、担当のいない人や止まっている人を見つけ、声をかけて仕事を割り振れるようにしました。サイトは学園祭の1週間前に完成し、15人全員が最後まで担当をやり切りました。
+
+現在は、大学のチーム開発演習（4人、Spring Boot の Web アプリ）でも使えるように作り直しています。
+
+## できること
+
+- **ログインとチーム**：メールとパスワードでログインし、チームを作るか、招待リンクで参加する。1つのアプリで複数のチームを切り替えられる
+- **タスク**：担当・期限・ステータス・「完了の条件」を付ける。ステータスの並びはチームごとに決められる。まとめて追加もできる
+- **役割で担当を付ける**：「フロントA」「バックA」のような役割にタスクを割り当てておき、メンバーが参加したら役割を受け持ってもらう
+- **ダッシュボード**：全体と段階ごとの進み具合、何日も動きのないタスク、確認待ちのまま止まっているタスクを表示する
+- **ロードマップ**：段階（マイルストーン）ごとの期間とやることを帯で表示する
+- **GitHub のプルリクエストとつなぐ**：タスクに PR を付けると、オープン・マージ済みなどの状態を表示し、全部マージされたら「完了にする」ボタンを出す
+- **質問箱**：メンバーの質問に、AI アシスタント（読み取りと回答だけができる専用アカウント）が答える
+
+## 工夫したところ
+
+### チームのデータを、データベースの側で守る
+
+画面で隠すだけだと、API を直接呼べば他のチームのデータが見えてしまいます。そこで Supabase（PostgreSQL）の **行単位のアクセス制御（RLS）** を使い、「ログイン中の人がそのチームのメンバーか」を判定する関数 `is_team_member` を作って、すべての表のルールで使うようにしました。
+
+- メンバーはチームのデータを見られる。書き込めるのは owner と member だけ（AI の assistant は読むだけ）
+- チームの設定を変えたり、他の人に役割を割り当てたりできるのは owner だけ
+- メンバーでない人はチームを見られないので、招待コードでの参加だけは `security definer` の関数で特別に照合する
+
+定義は [`supabase/`](supabase/) の SQL にあり、番号順に実行すると同じ表とルールができます。
+
+### 学園祭の版を残したまま作り直す
+
+学園祭で使ったデータは消さずに「アーカイブのチーム」として残し、同じ表に列を足す形で新しい機能を作りました（`supabase/005_archive_festival.sql`）。
+
+### GitHub の鍵をブラウザに出さない
+
+PR の状態は、サーバー側だけで読み取り専用のトークンを使って取得します（`lib/github.ts`）。鍵がないときや GitHub が読めないときも、リンクだけで表示を続けます。
+
+### 計算を画面から切り離す
+
+ダッシュボードの「進み具合」「止まっているタスク」の計算は、データベースにも画面にも頼らない関数にまとめました（`lib/dashboard.ts`）。
+
+## 技術
+
+| 用途 | 使ったもの |
+|---|---|
+| 画面・サーバー | Next.js 16（App Router）、React 19、TypeScript |
+| 見た目 | Tailwind CSS |
+| データベース・ログイン | Supabase（PostgreSQL、Auth、RLS） |
+| 公開 | Vercel（東京リージョン） |
+| 開発 | Claude Code を使いながら、設計・実装・データベースのルールを自分で確認して進めた |
+
+## 手元で動かす
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` に Supabase の接続先を書きます（値はリポジトリに入れていません）。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+GITHUB_TOKEN=...   # 任意。PR の状態を表示するときだけ
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+データベースは、Supabase の SQL エディタで `supabase/` の SQL を番号順に実行して作ります。
